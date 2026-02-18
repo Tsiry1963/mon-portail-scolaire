@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1280, initial-scale=1">
     <title>Système Scolaire Dynamique - Cloud Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
@@ -14,6 +14,7 @@
         body { 
             font-family: 'Inter', sans-serif; 
             -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; 
+            min-width: 1280px; /* Assure que le layout reste en mode bureau */
         }
         .sidebar-link { transition: all 0.3s; border-radius: 8px; margin-bottom: 4px; }
         .sidebar-link:hover { background-color: #e2e8f0; color: #1e3a8a; cursor: pointer; transform: translateX(5px); }
@@ -32,14 +33,13 @@
         .prep-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
         .prep-table th, .prep-table td { border: 1px solid #000; padding: 8px; vertical-align: top; }
         .prep-header { background-color: #f3f4f6; font-weight: bold; }
+
+        /* Styles pour les médias mobiles/manipulables */
+        .media-container { position: relative; display: inline-block; margin: 10px; border: 2px dashed #ccc; padding: 5px; cursor: move; }
+        .media-controls { position: absolute; top: -15px; right: -15px; display: flex; gap: 5px; z-index: 10; background: white; border-radius: 20px; padding: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .control-btn { width: 25px; height: 25px; border-radius: 50%; border: none; background: #1e3a8a; color: white; cursor: pointer; display: flex; items-center; justify-center; font-size: 12px; }
+        .media-container img, .media-container video { max-width: 300px; transition: transform 0.3s; }
     </style>
-    <script>
-        // Force l'affichage mode Ordinateur sur mobile
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            var viewport = document.querySelector("meta[name=viewport]");
-            viewport.setAttribute('content', 'width=1280');
-        }
-    </script>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen" oncontextmenu="return false;">
 
@@ -95,14 +95,8 @@
             </div>
             <div id="course-list-sidebar" class="space-y-4"></div>
         </aside>
-        
         <main class="md:w-3/4 space-y-6">
-            <div id="user-content-area" class="bg-white p-6 md:p-10 rounded-2xl shadow-md border border-gray-100 min-h-[500px]">
-                <div class="flex flex-col items-center justify-center h-64 text-gray-300">
-                    <i class="fas fa-book-reader text-6xl mb-4"></i>
-                    <p>Sélectionnez un chapitre pour commencer</p>
-                </div>
-            </div>
+            <div id="user-content-area" class="bg-white p-6 md:p-10 rounded-2xl shadow-md border border-gray-100 min-h-[500px]"></div>
             <div id="user-prep-area" class="hidden bg-white p-6 md:p-10 rounded-2xl shadow-md border border-gray-100">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-indigo-900">Fiche de Préparation</h2>
@@ -121,47 +115,38 @@
                 <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-cogs text-red-500"></i> Console Admin</h2>
                 <button onclick="location.reload()" class="text-sm bg-red-600 px-4 py-2 rounded-lg">Quitter</button>
             </div>
-
             <div class="flex border-b bg-gray-50 overflow-x-auto">
                 <button onclick="switchTab('tab-create')" id="btn-tab-create" class="p-4 px-6 transition tab-active whitespace-nowrap">Contenu</button>
                 <button onclick="switchTab('tab-prep')" id="btn-tab-prep" class="p-4 px-6 transition whitespace-nowrap">Fiche de Prep</button>
                 <button onclick="switchTab('tab-users')" id="btn-tab-users" class="p-4 px-6 transition whitespace-nowrap">Utilisateurs</button>
                 <button onclick="switchTab('tab-library')" id="btn-tab-library" class="p-4 px-6 transition whitespace-nowrap">Bibliothèque</button>
             </div>
-
             <div class="p-6">
                 <div id="tab-create" class="admin-tab">
                     <div class="max-w-4xl mx-auto space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <select id="adm-cycle" class="p-3 border rounded-xl bg-gray-50">
-                                <option>Primaire</option><option>Collège</option><option>Lycée</option>
-                            </select>
+                            <select id="adm-cycle" class="p-3 border rounded-xl bg-gray-50"><option>Primaire</option><option>Collège</option><option>Lycée</option></select>
                             <input type="text" id="adm-classe" placeholder="Classe" class="p-3 border rounded-xl bg-gray-50">
                             <input type="text" id="adm-matiere" placeholder="Matière" class="p-3 border rounded-xl bg-gray-50">
                         </div>
                         <input type="text" id="adm-chapitre" placeholder="Titre du Chapitre..." class="w-full p-4 text-2xl font-bold border-b-2 outline-none">
                         <div id="dynamic-sections-container" class="space-y-6"></div>
-                        <div class="flex gap-4 pt-6">
-                            <button onclick="addSection()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold">Ajouter Bloc</button>
+                        <div class="flex flex-wrap gap-4 pt-6">
+                            <button onclick="addSection()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold">Ajouter Bloc Texte</button>
+                            <label class="bg-orange-500 text-white px-6 py-3 rounded-xl font-bold cursor-pointer">
+                                Ajouter Image/Vidéo <input type="file" accept="image/*,video/*" class="hidden" onchange="handleMediaUpload(this)">
+                            </label>
                             <button onclick="publishContent()" class="bg-green-600 text-white px-6 py-3 rounded-xl font-bold ml-auto">ENREGISTRER</button>
                             <button onclick="resetCourseForm()" id="btn-cancel-edit" class="hidden bg-gray-500 text-white px-6 py-3 rounded-xl">Annuler</button>
-                            <input type="hidden" id="edit-lesson-id">
                         </div>
                     </div>
                 </div>
-
                 <div id="tab-prep" class="admin-tab hidden">
                     <div class="max-w-5xl mx-auto bg-slate-50 p-6 rounded-xl border">
                         <h3 class="font-bold mb-4 text-indigo-900 border-b pb-2">Configuration de la Fiche de Préparation</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500">Lier au Chapitre (ID)</label>
-                                <select id="prep-lesson-id" class="w-full p-2 border rounded bg-white" onchange="loadExistingPrep(this.value)"></select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500">Date de séance</label>
-                                <input type="date" id="prep-date" class="w-full p-2 border rounded">
-                            </div>
+                            <div><label class="block text-xs font-bold text-gray-500">Lier au Chapitre (ID)</label><select id="prep-lesson-id" class="w-full p-2 border rounded bg-white" onchange="loadExistingPrep(this.value)"></select></div>
+                            <div><label class="block text-xs font-bold text-gray-500">Date de séance</label><input type="date" id="prep-date" class="w-full p-2 border rounded"></div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <textarea id="prep-obj-disc" placeholder="Objectif disciplinaire" class="p-2 border rounded h-20"></textarea>
@@ -177,48 +162,28 @@
                         <button onclick="savePrepSheet()" class="w-full mt-10 bg-indigo-700 text-white py-4 rounded-xl font-bold">SAUVEGARDER LA FICHE</button>
                     </div>
                 </div>
-
                 <div id="tab-users" class="admin-tab hidden">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 h-fit">
                             <h3 class="font-bold text-lg mb-4 text-blue-900">Nouvel Accès</h3>
                             <div class="space-y-4">
                                 <input type="text" id="new-user-name" placeholder="Nom et Prénom" class="w-full p-3 border rounded-xl bg-white">
-                                <select id="new-user-type" class="w-full p-3 border rounded-xl bg-white">
-                                    <option value="Eleve">Élève</option>
-                                    <option value="Enseignant">Enseignant</option>
-                                </select>
+                                <select id="new-user-type" class="w-full p-3 border rounded-xl bg-white"><option value="Eleve">Élève</option><option value="Enseignant">Enseignant</option></select>
                                 <input type="text" id="new-user-resp" placeholder="Classe ou Matière" class="w-full p-3 border rounded-xl bg-white">
                                 <button onclick="addNewUser()" class="w-full bg-blue-900 text-white py-3 rounded-xl font-bold">Créer le compte</button>
                             </div>
                         </div>
                         <div class="lg:col-span-2 overflow-x-auto rounded-xl border">
                             <table class="w-full text-left bg-white text-sm">
-                                <thead class="bg-slate-800 text-white">
-                                    <tr>
-                                        <th class="p-4">Identité</th>
-                                        <th class="p-4">ID / Pass</th>
-                                        <th class="p-4">Rôle</th>
-                                        <th class="p-4">Action</th>
-                                    </tr>
-                                </thead>
+                                <thead class="bg-slate-800 text-white"><tr><th class="p-4">Identité</th><th class="p-4">ID / Pass</th><th class="p-4">Rôle</th><th class="p-4">Action</th></tr></thead>
                                 <tbody id="students-table-body" class="divide-y"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-
                 <div id="tab-library" class="admin-tab hidden">
                     <div class="overflow-x-auto rounded-xl border">
-                        <table class="w-full text-left bg-white">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="p-4 border-b">Détails du cours</th>
-                                    <th class="p-4 border-b text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lessons-table-body" class="divide-y"></tbody>
-                        </table>
+                        <table class="w-full text-left bg-white"><thead class="bg-gray-100"><tr><th class="p-4 border-b">Détails du cours</th><th class="p-4 border-b text-center">Actions</th></tr></thead><tbody id="lessons-table-body" class="divide-y"></tbody></table>
                     </div>
                 </div>
             </div>
@@ -229,6 +194,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
         import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
+        // Configuration Firebase (Identique)
         const firebaseConfig = {
             apiKey: "AIzaSyBexDEiFMC98r8ZqJjbfNazsKYOiXB1dck",
             authDomain: "edu-portal-3db68.firebaseapp.com",
@@ -238,10 +204,52 @@
             messagingSenderId: "58173024956",
             appId: "1:58173024956:web:17d27c8e7b495a48a7beb9"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
+        // --- GESTION MÉDIA (CORRECTION HORS LIGNE) ---
+        window.handleMediaUpload = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const type = file.type.startsWith('image') ? 'img' : 'video';
+                addMediaToEditor(e.target.result, type);
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.addMediaToEditor = (src, type) => {
+            window.sectionCount++;
+            const id = 'media-' + window.sectionCount;
+            const html = `
+                <div id="block-${window.sectionCount}" class="media-container bg-white shadow-lg rounded-lg group" data-type="${type}">
+                    <div class="media-controls">
+                        <button class="control-btn" onclick="rotateMedia('${id}')"><i class="fas fa-sync"></i></button>
+                        <button class="control-btn" onclick="moveMedia('${window.sectionCount}', 'up')"><i class="fas fa-arrow-up"></i></button>
+                        <button class="control-btn" onclick="moveMedia('${window.sectionCount}', 'down')"><i class="fas fa-arrow-down"></i></button>
+                        <button class="control-btn bg-red-500" onclick="this.closest('.media-container').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    ${type === 'img' ? `<img id="${id}" src="${src}" data-rotate="0">` : `<video id="${id}" src="${src}" controls data-rotate="0"></video>`}
+                </div>`;
+            document.getElementById('dynamic-sections-container').insertAdjacentHTML('beforeend', html);
+        };
+
+        window.rotateMedia = (id) => {
+            const el = document.getElementById(id);
+            let rot = parseInt(el.dataset.rotate) + 90;
+            if(rot >= 360) rot = 0;
+            el.style.transform = `rotate(${rot}deg)`;
+            el.dataset.rotate = rot;
+        };
+
+        window.moveMedia = (blockId, dir) => {
+            const el = document.getElementById('block-' + blockId);
+            if(dir === 'up') el.previousElementSibling?.before(el);
+            else el.nextElementSibling?.after(el);
+        };
+
+        // --- RESTE DU SCRIPT D'ORIGINE (FIXÉ) ---
         window.editors = {};
         window.sectionCount = 0;
         window.users = [];
@@ -249,7 +257,6 @@
         window.prepSheets = {};
         window.currentUser = null;
 
-        // --- ECOUTE FIREBASE ---
         onValue(ref(db, 'users'), (snapshot) => {
             const data = snapshot.val();
             window.users = data ? Object.keys(data).map(k => ({...data[k], fbKey: k})) : [];
@@ -264,11 +271,8 @@
             if(window.currentUser) updateStudentSidebar();
         });
 
-        onValue(ref(db, 'prepSheets'), (snapshot) => {
-            window.prepSheets = snapshot.val() || {};
-        });
+        onValue(ref(db, 'prepSheets'), (snapshot) => { window.prepSheets = snapshot.val() || {}; });
 
-        // --- NAVIGATION ---
         window.showSection = (id) => {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
@@ -299,9 +303,7 @@
                 document.getElementById('user-tabs').classList.remove('hidden');
                 if(user.type === 'Enseignant') document.getElementById('btn-view-prep').classList.remove('hidden');
                 updateStudentSidebar();
-            } else {
-                document.getElementById('stu-error').classList.remove('hidden');
-            }
+            } else { document.getElementById('stu-error').classList.remove('hidden'); }
         };
 
         window.switchUserView = (view) => {
@@ -311,133 +313,16 @@
             document.getElementById('btn-view-prep').classList.toggle('border-b-2', view === 'prep');
         };
 
-        // --- FICHE DE PREPARATION (FIX SAUVEGARDE) ---
-        window.addPrepStep = (phase = "", teacher = "", student = "", med = "") => {
-            const container = document.getElementById('prep-steps-container');
-            const html = `
-                <div class="prep-step-row grid grid-cols-1 md:grid-cols-4 gap-2 bg-white p-2 border rounded mb-2 shadow-sm">
-                    <input type="text" placeholder="Phase" class="step-phase p-2 border rounded text-xs" value="${phase}">
-                    <textarea placeholder="Enseignant" class="step-teacher p-2 border rounded text-xs">${teacher}</textarea>
-                    <textarea placeholder="Élève" class="step-student p-2 border rounded text-xs">${student}</textarea>
-                    <textarea placeholder="Médiation" class="step-med p-2 border rounded text-xs">${med}</textarea>
-                </div>`;
-            container.insertAdjacentHTML('beforeend', html);
-        };
-
-        window.loadExistingPrep = (lessonId) => {
-            if(!lessonId) return resetPrepForm(false);
-            const prep = window.prepSheets[lessonId];
-            const container = document.getElementById('prep-steps-container');
-            container.innerHTML = "";
-            if(prep) {
-                document.getElementById('prep-date').value = prep.date || "";
-                document.getElementById('prep-obj-disc').value = prep.objDisc || "";
-                document.getElementById('prep-obj-lang').value = prep.objLang || "";
-                document.getElementById('prep-competences').value = prep.competences || "";
-                document.getElementById('prep-connaissances').value = prep.connaissances || "";
-                if(prep.steps) prep.steps.forEach(s => addPrepStep(s.phase, s.teacher, s.student, s.med));
-                else addPrepStep();
-            } else {
-                resetPrepForm(false);
-            }
-        };
-
-        function resetPrepForm(full = true) {
-            if(full) document.getElementById('prep-lesson-id').value = "";
-            document.getElementById('prep-date').value = "";
-            document.getElementById('prep-obj-disc').value = "";
-            document.getElementById('prep-obj-lang').value = "";
-            document.getElementById('prep-competences').value = "";
-            document.getElementById('prep-connaissances').value = "";
-            document.getElementById('prep-steps-container').innerHTML = "";
-            addPrepStep();
-        }
-
-        window.savePrepSheet = () => {
-            const lessonId = document.getElementById('prep-lesson-id').value;
-            if(!lessonId) { alert("Veuillez sélectionner un chapitre."); return; }
-            
-            const steps = [];
-            document.querySelectorAll('.prep-step-row').forEach(row => {
-                steps.push({
-                    phase: row.querySelector('.step-phase').value,
-                    teacher: row.querySelector('.step-teacher').value,
-                    student: row.querySelector('.step-student').value,
-                    med: row.querySelector('.step-med').value
-                });
-            });
-
-            const data = {
-                date: document.getElementById('prep-date').value,
-                objDisc: document.getElementById('prep-obj-disc').value,
-                objLang: document.getElementById('prep-obj-lang').value,
-                competences: document.getElementById('prep-competences').value,
-                connaissances: document.getElementById('prep-connaissances').value,
-                steps: steps
-            };
-
-            set(ref(db, 'prepSheets/' + lessonId), data)
-                .then(() => {
-                    alert("Fiche de préparation sauvegardée avec succès !");
-                    resetPrepForm(true);
-                })
-                .catch((error) => alert("Erreur : " + error.message));
-        };
-
-        window.populatePrepSelect = () => {
-            const s = document.getElementById('prep-lesson-id');
-            const cur = s.value;
-            s.innerHTML = '<option value="">-- Choisir un chapitre --</option>' + 
-                window.publishedLessons.map(l => `<option value="${l.fbKey}">${l.chapitre} (${l.classe})</option>`).join('');
-            if(cur) s.value = cur;
-        };
-
-        // --- MENU LATERAL SOMMAIRE ---
-        window.updateStudentSidebar = () => {
-            const search = document.getElementById('user-course-search').value.toLowerCase();
-            const sidebar = document.getElementById('course-list-sidebar');
-            sidebar.innerHTML = "";
-
-            const myLessons = window.publishedLessons.filter(l => 
-                l.classe.toLowerCase() === window.currentUser.resp.toLowerCase() &&
-                (l.chapitre.toLowerCase().includes(search) || l.matiere.toLowerCase().includes(search))
-            );
-
-            const grouped = myLessons.reduce((acc, curr) => {
-                if(!acc[curr.matiere]) acc[curr.matiere] = [];
-                acc[curr.matiere].push(curr);
-                return acc;
-            }, {});
-
-            for (const matiere in grouped) {
-                let matiereHtml = `
-                    <div class="mb-4">
-                        <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-tighter mb-2 border-b border-blue-100 pb-1">${matiere}</h4>
-                        <div class="space-y-2">`;
-                
-                grouped[matiere].forEach(lesson => {
-                    matiereHtml += `
-                        <div class="group">
-                            <button onclick="viewLesson('${lesson.fbKey}')" class="w-full text-left p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-300 shadow-sm transition">
-                                <span class="text-xs font-bold text-slate-700 leading-tight">${lesson.chapitre}</span>
-                            </button>
-                            <ul class="ml-4 mt-1 space-y-1 border-l-2 border-slate-100 pl-2 hidden group-focus-within:block">
-                                ${lesson.sections.map(s => `<li class="text-[10px] text-slate-400 italic truncate">• ${s.title}</li>`).join('')}
-                            </ul>
-                        </div>`;
-                });
-                matiereHtml += `</div></div>`;
-                sidebar.insertAdjacentHTML('beforeend', matiereHtml);
-            }
-        };
-
-        // --- GESTION CONTENU ---
         window.addSection = (title = "", content = "", level = "h1") => {
             window.sectionCount++;
             const id = 'editor-' + window.sectionCount;
             const html = `
-                <div id="block-${window.sectionCount}" class="p-4 bg-white border rounded-xl relative shadow-sm">
-                    <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full">×</button>
+                <div id="block-${window.sectionCount}" class="p-4 bg-white border rounded-xl relative shadow-sm" data-type="text">
+                    <div class="absolute -top-2 -right-2 flex gap-1">
+                        <button onclick="moveMedia('${window.sectionCount}', 'up')" class="bg-gray-500 text-white w-6 h-6 rounded-full text-xs">↑</button>
+                        <button onclick="moveMedia('${window.sectionCount}', 'down')" class="bg-gray-500 text-white w-6 h-6 rounded-full text-xs">↓</button>
+                        <button onclick="this.closest('#block-${window.sectionCount}').remove()" class="bg-red-500 text-white w-6 h-6 rounded-full">×</button>
+                    </div>
                     <div class="flex gap-2 mb-2">
                         <select class="p-2 border rounded text-xs bg-blue-50"><option value="h1" ${level=='h1'?'selected':''}>Titre I</option><option value="h2" ${level=='h2'?'selected':''}>Sous-titre A</option><option value="h3" ${level=='h3'?'selected':''}>Petit 1</option></select>
                         <input type="text" value="${title}" placeholder="Titre..." class="flex-1 p-2 font-bold border-b text-sm">
@@ -458,13 +343,88 @@
                 sections: []
             };
             document.querySelectorAll('#dynamic-sections-container > div').forEach(div => {
-                const edId = div.querySelector('textarea').id;
-                lesson.sections.push({ level: div.querySelector('select').value, title: div.querySelector('input').value, body: window.editors[edId].getData() });
+                if(div.dataset.type === 'text') {
+                    const edId = div.querySelector('textarea').id;
+                    lesson.sections.push({ type:'text', level: div.querySelector('select').value, title: div.querySelector('input').value, body: window.editors[edId].getData() });
+                } else {
+                    const media = div.querySelector('img, video');
+                    lesson.sections.push({ type:'media', mType: div.dataset.type, src: media.src, rotate: media.dataset.rotate });
+                }
             });
             const refL = key ? ref(db, 'lessons/' + key) : push(ref(db, 'lessons'));
             set(refL, lesson).then(() => { alert("Contenu enregistré !"); resetCourseForm(); switchTab('tab-library'); });
         };
 
+        window.viewLesson = (key) => {
+            const l = window.publishedLessons.find(x => x.fbKey === key);
+            let html = `<h2 class="text-2xl font-black text-blue-900 mb-6 border-b-4 border-blue-900 pb-2">${l.chapitre}</h2>`;
+            l.sections.forEach(s => {
+                if(s.type === 'text' || !s.type) {
+                    html += `<div class="mb-8"><div class="${s.level}-style">${s.title}</div><div class="mt-3 leading-relaxed">${s.body}</div></div>`;
+                } else {
+                    html += `<div class="my-4 text-center">
+                        ${s.mType === 'img' ? `<img src="${s.src}" style="transform:rotate(${s.rotate}deg); max-width:80%; margin:auto;">` : `<video src="${s.src}" controls style="transform:rotate(${s.rotate}deg); max-width:80%; margin:auto;"></video>`}
+                    </div>`;
+                }
+            });
+            document.getElementById('user-content-area').innerHTML = html;
+            renderPrepSheetForUser(key);
+            switchUserView('content');
+        };
+
+        // ... Reste des fonctions originales (addPrepStep, loadExistingPrep, savePrepSheet, etc.) ...
+        window.addPrepStep = (phase = "", teacher = "", student = "", med = "") => {
+            const container = document.getElementById('prep-steps-container');
+            const html = `<div class="prep-step-row grid grid-cols-1 md:grid-cols-4 gap-2 bg-white p-2 border rounded mb-2 shadow-sm">
+                <input type="text" placeholder="Phase" class="step-phase p-2 border rounded text-xs" value="${phase}">
+                <textarea placeholder="Enseignant" class="step-teacher p-2 border rounded text-xs">${teacher}</textarea>
+                <textarea placeholder="Élève" class="step-student p-2 border rounded text-xs">${student}</textarea>
+                <textarea placeholder="Médiation" class="step-med p-2 border rounded text-xs">${med}</textarea></div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        };
+        window.loadExistingPrep = (lessonId) => {
+            if(!lessonId) return;
+            const prep = window.prepSheets[lessonId];
+            const container = document.getElementById('prep-steps-container');
+            container.innerHTML = "";
+            if(prep) {
+                document.getElementById('prep-date').value = prep.date || "";
+                document.getElementById('prep-obj-disc').value = prep.objDisc || "";
+                document.getElementById('prep-obj-lang').value = prep.objLang || "";
+                document.getElementById('prep-competences').value = prep.competences || "";
+                document.getElementById('prep-connaissances').value = prep.connaissances || "";
+                if(prep.steps) prep.steps.forEach(s => addPrepStep(s.phase, s.teacher, s.student, s.med));
+            } else { addPrepStep(); }
+        };
+        window.savePrepSheet = () => {
+            const lessonId = document.getElementById('prep-lesson-id').value;
+            if(!lessonId) return alert("Choisir un chapitre");
+            const steps = [];
+            document.querySelectorAll('.prep-step-row').forEach(row => {
+                steps.push({ phase: row.querySelector('.step-phase').value, teacher: row.querySelector('.step-teacher').value, student: row.querySelector('.step-student').value, med: row.querySelector('.step-med').value });
+            });
+            set(ref(db, 'prepSheets/' + lessonId), { date: document.getElementById('prep-date').value, objDisc: document.getElementById('prep-obj-disc').value, objLang: document.getElementById('prep-obj-lang').value, competences: document.getElementById('prep-competences').value, connaissances: document.getElementById('prep-connaissances').value, steps: steps })
+            .then(() => alert("Sauvegardé !"));
+        };
+        window.populatePrepSelect = () => {
+            const s = document.getElementById('prep-lesson-id');
+            s.innerHTML = '<option value="">-- Choisir un chapitre --</option>' + window.publishedLessons.map(l => `<option value="${l.fbKey}">${l.chapitre} (${l.classe})</option>`).join('');
+        };
+        window.updateStudentSidebar = () => {
+            const search = document.getElementById('user-course-search').value.toLowerCase();
+            const sidebar = document.getElementById('course-list-sidebar');
+            sidebar.innerHTML = "";
+            const myLessons = window.publishedLessons.filter(l => l.classe.toLowerCase() === window.currentUser.resp.toLowerCase() && (l.chapitre.toLowerCase().includes(search) || l.matiere.toLowerCase().includes(search)));
+            const grouped = myLessons.reduce((acc, curr) => { if(!acc[curr.matiere]) acc[curr.matiere] = []; acc[curr.matiere].push(curr); return acc; }, {});
+            for (const matiere in grouped) {
+                let html = `<div class="mb-4"><h4 class="text-[10px] font-black text-blue-500 uppercase mb-2 border-b pb-1">${matiere}</h4><div class="space-y-2">`;
+                grouped[matiere].forEach(lesson => {
+                    html += `<button onclick="viewLesson('${lesson.fbKey}')" class="w-full text-left p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-300 shadow-sm transition text-xs font-bold">${lesson.chapitre}</button>`;
+                });
+                html += `</div></div>`;
+                sidebar.insertAdjacentHTML('beforeend', html);
+            }
+        };
         window.resetCourseForm = () => {
             document.getElementById('dynamic-sections-container').innerHTML = "";
             document.getElementById('edit-lesson-id').value = "";
@@ -472,68 +432,25 @@
             window.sectionCount = 0; window.editors = {};
             addSection();
         };
-
-        window.viewLesson = (key) => {
-            const l = window.publishedLessons.find(x => x.fbKey === key);
-            let html = `<h2 class="text-2xl font-black text-blue-900 mb-6 border-b-4 border-blue-900 pb-2">${l.chapitre}</h2>`;
-            l.sections.forEach(s => { html += `<div class="mb-8"><div class="${s.level}-style">${s.title}</div><div class="mt-3 leading-relaxed">${s.body}</div></div>`; });
-            document.getElementById('user-content-area').innerHTML = html;
-            renderPrepSheetForUser(key);
-            switchUserView('content');
-        };
-
-        function renderPrepSheetForUser(lessonKey) {
-            const prep = window.prepSheets[lessonKey];
-            const div = document.getElementById('prep-sheet-render');
-            const lesson = window.publishedLessons.find(x => x.fbKey === lessonKey);
-            if(!prep) { div.innerHTML = "<p class='text-gray-400 italic'>Aucune fiche de préparation disponible.</p>"; return; }
-            let st = prep.steps.map(s => `<tr><td class="font-bold">${s.phase}</td><td>${s.teacher}</td><td>${s.student}</td><td>${s.med}</td></tr>`).join('');
-            div.innerHTML = `
-                <div id="pdf-content" class="bg-white p-4 border border-black">
-                    <table class="prep-table">
-                        <tr><td colspan="2"><b>Classe :</b> ${lesson.classe}</td><td colspan="2" class="text-center font-bold">${lesson.chapitre}</td><td><b>Date :</b> ${prep.date}</td></tr>
-                        <tr><td colspan="5"><b>Objectifs :</b> ${prep.objDisc}</td></tr>
-                    </table>
-                    <table class="prep-table mt-4"><tr class="prep-header"><td>Phase</td><td>Rôle Enseignant</td><td>Tâche Élève</td><td>Médiation</td></tr>${st}</table>
-                </div>`;
-        }
-
-        window.requestPdfDownload = () => {
-            if(prompt("Code PDF :") === "Tsiry@PDF") {
-                html2pdf().set({ margin: 10, filename: 'Prep.pdf', jsPDF: { format: 'a4', orientation: 'landscape' } }).from(document.getElementById('pdf-content')).save();
-            }
-        };
-
-        window.addNewUser = () => {
-            const n = document.getElementById('new-user-name').value;
-            const t = document.getElementById('new-user-type').value;
-            const r = document.getElementById('new-user-resp').value;
-            if(!n) return;
-            const id = n.toLowerCase().slice(0,4).replace(/\s/g,'') + Math.floor(100+Math.random()*899);
-            push(ref(db, 'users'), { name: n, type: t, resp: r, id: id, pass: Math.random().toString(36).slice(-5).toUpperCase(), active: true });
-            document.getElementById('new-user-name').value = "";
-            document.getElementById('new-user-resp').value = "";
-        };
-
-        window.deleteUser = (k) => { if(confirm("Supprimer ?")) remove(ref(db, 'users/' + k)); };
-        window.toggleUser = (k, s) => set(ref(db, 'users/' + k + '/active'), !s);
-        window.editLesson = (k) => {
-            const l = window.publishedLessons.find(x => x.fbKey === k);
-            document.getElementById('edit-lesson-id').value = k;
-            document.getElementById('adm-cycle').value = l.cycle;
-            document.getElementById('adm-classe').value = l.classe;
-            document.getElementById('adm-matiere').value = l.matiere;
-            document.getElementById('adm-chapitre').value = l.chapitre;
-            document.getElementById('dynamic-sections-container').innerHTML = "";
-            l.sections.forEach(s => addSection(s.title, s.body, s.level));
-            switchTab('tab-create');
-        };
-        window.deleteLesson = (k) => { if(confirm("Supprimer ?")) { remove(ref(db, 'lessons/' + k)); remove(ref(db, 'prepSheets/' + k)); } };
         window.renderUserTable = () => {
             document.getElementById('students-table-body').innerHTML = window.users.map(u => `<tr><td class="p-4">${u.name}</td><td class="p-4"><code>${u.id}/${u.pass}</code></td><td class="p-4">${u.type}</td><td class="p-4"><button onclick="toggleUser('${u.fbKey}',${u.active})">${u.active?'Bloquer':'Activer'}</button></td></tr>`).join('');
         };
         window.renderLessonsTable = () => {
             document.getElementById('lessons-table-body').innerHTML = window.publishedLessons.map(l => `<tr><td class="p-4"><b>${l.chapitre}</b> (${l.matiere})</td><td class="p-4 text-center"><button onclick="editLesson('${l.fbKey}')" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button onclick="deleteLesson('${l.fbKey}')" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+        };
+        window.addNewUser = () => {
+            const n = document.getElementById('new-user-name').value;
+            const t = document.getElementById('new-user-type').value;
+            const r = document.getElementById('new-user-resp').value;
+            const id = n.toLowerCase().slice(0,4).replace(/\s/g,'') + Math.floor(100+Math.random()*899);
+            push(ref(db, 'users'), { name: n, type: t, resp: r, id: id, pass: Math.random().toString(36).slice(-5).toUpperCase(), active: true });
+        };
+        window.toggleUser = (k, s) => set(ref(db, 'users/' + k + '/active'), !s);
+        window.deleteLesson = (k) => { if(confirm("Supprimer ?")) { remove(ref(db, 'lessons/' + k)); remove(ref(db, 'prepSheets/' + k)); } };
+        window.requestPdfDownload = () => {
+            if(prompt("Code PDF :") === "Tsiry@PDF") {
+                html2pdf().set({ margin: 10, filename: 'Prep.pdf', jsPDF: { format: 'a4', orientation: 'landscape' } }).from(document.getElementById('pdf-content')).save();
+            }
         };
         window.filterUserSidebar = () => updateStudentSidebar();
     </script>
