@@ -151,7 +151,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div>
                                 <label class="block text-xs font-bold text-gray-500">Lier au Chapitre (ID)</label>
-                                <select id="prep-lesson-id" class="w-full p-2 border rounded bg-white"></select>
+                                <select id="prep-lesson-id" class="w-full p-2 border rounded bg-white" onchange="loadExistingPrep(this.value)"></select>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-500">Date de séance</label>
@@ -308,17 +308,49 @@
         };
 
         // --- FICHE DE PREPARATION ---
-        window.addPrepStep = () => {
+        window.addPrepStep = (phase = "", teacher = "", student = "", med = "") => {
             const container = document.getElementById('prep-steps-container');
             const html = `
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-2 bg-white p-2 border rounded mb-2">
-                    <input type="text" placeholder="Phase (ex: Enrôlement)" class="p-2 border rounded text-xs">
-                    <textarea placeholder="Rôle enseignant" class="p-2 border rounded text-xs"></textarea>
-                    <textarea placeholder="Tâche élève" class="p-2 border rounded text-xs"></textarea>
-                    <textarea placeholder="Médiation" class="p-2 border rounded text-xs"></textarea>
+                    <input type="text" placeholder="Phase (ex: Enrôlement)" class="p-2 border rounded text-xs" value="${phase}">
+                    <textarea placeholder="Rôle enseignant" class="p-2 border rounded text-xs">${teacher}</textarea>
+                    <textarea placeholder="Tâche élève" class="p-2 border rounded text-xs">${student}</textarea>
+                    <textarea placeholder="Médiation" class="p-2 border rounded text-xs">${med}</textarea>
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
         };
+
+        window.loadExistingPrep = (lessonId) => {
+            const prep = window.prepSheets[lessonId];
+            const container = document.getElementById('prep-steps-container');
+            container.innerHTML = "";
+            
+            if(prep) {
+                document.getElementById('prep-date').value = prep.date || "";
+                document.getElementById('prep-obj-disc').value = prep.objDisc || "";
+                document.getElementById('prep-obj-lang').value = prep.objLang || "";
+                document.getElementById('prep-competences').value = prep.competences || "";
+                document.getElementById('prep-connaissances').value = prep.connaissances || "";
+                if(prep.steps) {
+                    prep.steps.forEach(s => addPrepStep(s.phase, s.teacher, s.student, s.med));
+                } else {
+                    addPrepStep();
+                }
+            } else {
+                resetPrepForm(false);
+            }
+        };
+
+        function resetPrepForm(fullReset = true) {
+            if(fullReset) document.getElementById('prep-lesson-id').value = "";
+            document.getElementById('prep-date').value = "";
+            document.getElementById('prep-obj-disc').value = "";
+            document.getElementById('prep-obj-lang').value = "";
+            document.getElementById('prep-competences').value = "";
+            document.getElementById('prep-connaissances').value = "";
+            document.getElementById('prep-steps-container').innerHTML = "";
+            addPrepStep();
+        }
 
         window.savePrepSheet = () => {
             const lessonId = document.getElementById('prep-lesson-id').value;
@@ -339,12 +371,18 @@
                 steps: steps
             };
 
-            set(ref(db, 'prepSheets/' + lessonId), data).then(() => alert("Fiche enregistrée !"));
+            set(ref(db, 'prepSheets/' + lessonId), data).then(() => {
+                alert("Fiche enregistrée avec succès !");
+                resetPrepForm(true);
+            });
         };
 
         window.populatePrepSelect = () => {
             const select = document.getElementById('prep-lesson-id');
-            select.innerHTML = window.publishedLessons.map(l => `<option value="${l.fbKey}">${l.chapitre} (${l.classe})</option>`).join('');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- Sélectionner un chapitre --</option>' + 
+                window.publishedLessons.map(l => `<option value="${l.fbKey}">${l.chapitre} (${l.classe})</option>`).join('');
+            if(currentVal) select.value = currentVal;
         };
 
         // --- GESTION COURS (ORIGINAL) ---
@@ -379,10 +417,11 @@
                 sections: []
             };
             document.querySelectorAll('#dynamic-sections-container > div').forEach(div => {
+                const editorId = div.querySelector('textarea').id;
                 lesson.sections.push({
                     level: div.querySelector('select').value,
                     title: div.querySelector('input').value,
-                    body: window.editors[div.querySelector('textarea').id].getData()
+                    body: window.editors[editorId].getData()
                 });
             });
             const lessonRef = fbKey ? ref(db, 'lessons/' + fbKey) : push(ref(db, 'lessons'));
@@ -392,6 +431,9 @@
         window.resetCourseForm = () => {
             document.getElementById('dynamic-sections-container').innerHTML = "";
             document.getElementById('edit-lesson-id').value = "";
+            document.getElementById('adm-chapitre').value = "";
+            document.getElementById('adm-classe').value = "";
+            document.getElementById('adm-matiere').value = "";
             window.sectionCount = 0; window.editors = {};
             addSection();
         };
@@ -402,13 +444,14 @@
             const type = document.getElementById('new-user-type').value;
             const resp = document.getElementById('new-user-resp').value;
             if(!name) return;
-            const id = name.toLowerCase().slice(0,4) + Math.floor(100+Math.random()*899);
+            const id = name.toLowerCase().slice(0,4).replace(/\s/g, '') + Math.floor(100+Math.random()*899);
             const pass = Math.random().toString(36).slice(-5).toUpperCase();
             push(ref(db, 'users'), { name, type, resp, id, pass, active: true });
+            document.getElementById('new-user-name').value = "";
+            document.getElementById('new-user-resp').value = "";
         };
 
         window.deleteUser = (key) => { if(confirm("Supprimer définitivement cet utilisateur ?")) remove(ref(db, 'users/' + key)); };
-        
         window.toggleUser = (key, status) => { set(ref(db, 'users/' + key + '/active'), !status); };
 
         // --- AFFICHAGE ---
@@ -476,7 +519,7 @@
             renderDiv.innerHTML = `
                 <div id="pdf-content" class="bg-white p-4 border border-black">
                     <table class="prep-table">
-                        <tr><td colspan="2"><b>Niveau :</b> ${lesson.classe}</td><td colspan="2" rowspan="2" class="text-center"><b>${lesson.chapitre}</b></td><td rowspan="2"><b>Date :</b> ${prep.date}</td></tr>
+                        <tr><td colspan="2"><b>Niveau :</b> ${lesson.classe}</td><td colspan="2" rowspan="2" class="text-center text-lg"><b>${lesson.chapitre}</b></td><td rowspan="2"><b>Date :</b> ${prep.date}</td></tr>
                         <tr><td colspan="2"><b>Discipline :</b> ${lesson.matiere}</td></tr>
                         <tr><td colspan="2"><b>Objectif disciplinaire :</b><br>${prep.objDisc}</td><td colspan="3"><b>Connaissances :</b><br>${prep.connaissances}</td></tr>
                         <tr><td colspan="2"><b>Objectif langagier :</b><br>${prep.objLang}</td><td colspan="3"><b>Compétences :</b><br>${prep.competences}</td></tr>
@@ -492,6 +535,7 @@
             const code = prompt("Veuillez saisir le code d'autorisation administrateur pour le téléchargement PDF :");
             if(code === "Tsiry@PDF") {
                 const element = document.getElementById('pdf-content');
+                if(!element) return alert("Rien à télécharger.");
                 const opt = { margin: 10, filename: 'Fiche_Preparation.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
                 html2pdf().set(opt).from(element).save();
             } else {
@@ -504,6 +548,7 @@
             document.getElementById('edit-lesson-id').value = key;
             document.getElementById('adm-cycle').value = l.cycle;
             document.getElementById('adm-classe').value = l.classe;
+            document.getElementById('adm-matiere').value = l.matiere;
             document.getElementById('adm-chapitre').value = l.chapitre;
             document.getElementById('dynamic-sections-container').innerHTML = "";
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
@@ -511,7 +556,7 @@
             switchTab('tab-create');
         };
 
-        window.deleteLesson = (key) => { if(confirm("Supprimer ?")) remove(ref(db, 'lessons/' + key)); };
+        window.deleteLesson = (key) => { if(confirm("Supprimer ?")) { remove(ref(db, 'lessons/' + key)); remove(ref(db, 'prepSheets/' + key)); } };
         window.filterUserSidebar = () => updateStudentSidebar();
     </script>
 </body>
