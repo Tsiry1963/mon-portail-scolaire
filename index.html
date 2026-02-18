@@ -29,7 +29,6 @@
         
         .tab-active { border-bottom: 3px solid #ef4444; color: #ef4444; font-weight: bold; }
         
-        /* Table Style for Preparation Sheet */
         .prep-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
         .prep-table th, .prep-table td { border: 1px solid #000; padding: 8px; vertical-align: top; }
         .prep-header { background-color: #f3f4f6; font-weight: bold; }
@@ -104,8 +103,7 @@
                         <i class="fas fa-file-pdf mr-2"></i>Télécharger PDF
                     </button>
                 </div>
-                <div id="prep-sheet-render" class="overflow-x-auto">
-                    </div>
+                <div id="prep-sheet-render" class="overflow-x-auto"></div>
             </div>
         </main>
     </section>
@@ -243,7 +241,6 @@
         window.publishedLessons = [];
         window.prepSheets = {};
         window.currentUser = null;
-        window.currentLessonKey = null;
 
         // --- ECOUTE FIREBASE ---
         onValue(ref(db, 'users'), (snapshot) => {
@@ -307,20 +304,21 @@
             document.getElementById('btn-view-prep').classList.toggle('border-b-2', view === 'prep');
         };
 
-        // --- FICHE DE PREPARATION (LOGIQUE FIXÉE) ---
+        // --- FICHE DE PREPARATION (FIX SAUVEGARDE) ---
         window.addPrepStep = (phase = "", teacher = "", student = "", med = "") => {
             const container = document.getElementById('prep-steps-container');
             const html = `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-2 bg-white p-2 border rounded mb-2 shadow-sm">
-                    <input type="text" placeholder="Phase" class="p-2 border rounded text-xs" value="${phase}">
-                    <textarea placeholder="Enseignant" class="p-2 border rounded text-xs">${teacher}</textarea>
-                    <textarea placeholder="Élève" class="p-2 border rounded text-xs">${student}</textarea>
-                    <textarea placeholder="Médiation" class="p-2 border rounded text-xs">${med}</textarea>
+                <div class="prep-step-row grid grid-cols-1 md:grid-cols-4 gap-2 bg-white p-2 border rounded mb-2 shadow-sm">
+                    <input type="text" placeholder="Phase" class="step-phase p-2 border rounded text-xs" value="${phase}">
+                    <textarea placeholder="Enseignant" class="step-teacher p-2 border rounded text-xs">${teacher}</textarea>
+                    <textarea placeholder="Élève" class="step-student p-2 border rounded text-xs">${student}</textarea>
+                    <textarea placeholder="Médiation" class="step-med p-2 border rounded text-xs">${med}</textarea>
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
         };
 
         window.loadExistingPrep = (lessonId) => {
+            if(!lessonId) return resetPrepForm(false);
             const prep = window.prepSheets[lessonId];
             const container = document.getElementById('prep-steps-container');
             container.innerHTML = "";
@@ -350,12 +348,18 @@
 
         window.savePrepSheet = () => {
             const lessonId = document.getElementById('prep-lesson-id').value;
-            if(!lessonId) return alert("Sélectionnez un cours.");
+            if(!lessonId) { alert("Veuillez sélectionner un chapitre."); return; }
+            
             const steps = [];
-            document.querySelectorAll('#prep-steps-container > div').forEach(div => {
-                const i = div.querySelectorAll('input, textarea');
-                steps.push({ phase: i[0].value, teacher: i[1].value, student: i[2].value, med: i[3].value });
+            document.querySelectorAll('.prep-step-row').forEach(row => {
+                steps.push({
+                    phase: row.querySelector('.step-phase').value,
+                    teacher: row.querySelector('.step-teacher').value,
+                    student: row.querySelector('.step-student').value,
+                    med: row.querySelector('.step-med').value
+                });
             });
+
             const data = {
                 date: document.getElementById('prep-date').value,
                 objDisc: document.getElementById('prep-obj-disc').value,
@@ -364,33 +368,34 @@
                 connaissances: document.getElementById('prep-connaissances').value,
                 steps: steps
             };
-            set(ref(db, 'prepSheets/' + lessonId), data).then(() => {
-                alert("Fiche enregistrée !");
-                resetPrepForm();
-            });
+
+            set(ref(db, 'prepSheets/' + lessonId), data)
+                .then(() => {
+                    alert("Fiche de préparation sauvegardée avec succès !");
+                    resetPrepForm(true);
+                })
+                .catch((error) => alert("Erreur : " + error.message));
         };
 
         window.populatePrepSelect = () => {
             const s = document.getElementById('prep-lesson-id');
             const cur = s.value;
-            s.innerHTML = '<option value="">-- Choisir un cours --</option>' + 
+            s.innerHTML = '<option value="">-- Choisir un chapitre --</option>' + 
                 window.publishedLessons.map(l => `<option value="${l.fbKey}">${l.chapitre} (${l.classe})</option>`).join('');
             if(cur) s.value = cur;
         };
 
-        // --- ORGANISATION MENU LATERAL (MATIERE > CHAPITRE > TITRES) ---
+        // --- MENU LATERAL SOMMAIRE ---
         window.updateStudentSidebar = () => {
             const search = document.getElementById('user-course-search').value.toLowerCase();
             const sidebar = document.getElementById('course-list-sidebar');
             sidebar.innerHTML = "";
 
-            // Filtrer par classe de l'utilisateur
             const myLessons = window.publishedLessons.filter(l => 
                 l.classe.toLowerCase() === window.currentUser.resp.toLowerCase() &&
                 (l.chapitre.toLowerCase().includes(search) || l.matiere.toLowerCase().includes(search))
             );
 
-            // Grouper par Matière
             const grouped = myLessons.reduce((acc, curr) => {
                 if(!acc[curr.matiere]) acc[curr.matiere] = [];
                 acc[curr.matiere].push(curr);
@@ -410,7 +415,7 @@
                                 <span class="text-xs font-bold text-slate-700 leading-tight">${lesson.chapitre}</span>
                             </button>
                             <ul class="ml-4 mt-1 space-y-1 border-l-2 border-slate-100 pl-2 hidden group-focus-within:block">
-                                ${lesson.sections.map(s => `<li class="text-[10px] text-slate-400 italic truncate">${s.title}</li>`).join('')}
+                                ${lesson.sections.map(s => `<li class="text-[10px] text-slate-400 italic truncate">• ${s.title}</li>`).join('')}
                             </ul>
                         </div>`;
                 });
@@ -450,7 +455,7 @@
                 lesson.sections.push({ level: div.querySelector('select').value, title: div.querySelector('input').value, body: window.editors[edId].getData() });
             });
             const refL = key ? ref(db, 'lessons/' + key) : push(ref(db, 'lessons'));
-            set(refL, lesson).then(() => { alert("Enregistré !"); resetCourseForm(); switchTab('tab-library'); });
+            set(refL, lesson).then(() => { alert("Contenu enregistré !"); resetCourseForm(); switchTab('tab-library'); });
         };
 
         window.resetCourseForm = () => {
@@ -462,7 +467,6 @@
         };
 
         window.viewLesson = (key) => {
-            window.currentLessonKey = key;
             const l = window.publishedLessons.find(x => x.fbKey === key);
             let html = `<h2 class="text-2xl font-black text-blue-900 mb-6 border-b-4 border-blue-900 pb-2">${l.chapitre}</h2>`;
             l.sections.forEach(s => { html += `<div class="mb-8"><div class="${s.level}-style">${s.title}</div><div class="mt-3 leading-relaxed">${s.body}</div></div>`; });
@@ -500,6 +504,8 @@
             if(!n) return;
             const id = n.toLowerCase().slice(0,4).replace(/\s/g,'') + Math.floor(100+Math.random()*899);
             push(ref(db, 'users'), { name: n, type: t, resp: r, id: id, pass: Math.random().toString(36).slice(-5).toUpperCase(), active: true });
+            document.getElementById('new-user-name').value = "";
+            document.getElementById('new-user-resp').value = "";
         };
 
         window.deleteUser = (k) => { if(confirm("Supprimer ?")) remove(ref(db, 'users/' + k)); };
