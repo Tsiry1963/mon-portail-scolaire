@@ -217,27 +217,27 @@
         import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
         const firebaseConfig = {
-  apiKey: "AIzaSyBexDEiFMC98r8ZqJjbfNazsKYOiXB1dck",
-  authDomain: "edu-portal-3db68.firebaseapp.com",
-  databaseURL: "https://edu-portal-3db68-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "edu-portal-3db68",
-  storageBucket: "edu-portal-3db68.firebasestorage.app",
-  messagingSenderId: "58173024956",
-  appId: "1:58173024956:web:17d27c8e7b495a48a7beb9",
-  measurementId: "G-E6XPJFT967"
-};
+            apiKey: "AIzaSyBexDEiFMC98r8ZqJjbfNazsKYOiXB1dck",
+            authDomain: "edu-portal-3db68.firebaseapp.com",
+            databaseURL: "https://edu-portal-3db68-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "edu-portal-3db68",
+            storageBucket: "edu-portal-3db68.firebasestorage.app",
+            messagingSenderId: "58173024956",
+            appId: "1:58173024956:web:17d27c8e7b495a48a7beb9",
+            measurementId: "G-E6XPJFT967"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Variables Globales
+        // Variables Globales window pour accès depuis les attributs onclick HTML
         window.editors = {};
         window.sectionCount = 0;
         window.users = [];
         window.publishedLessons = [];
         window.currentUser = null;
 
-        // Écouter les données en temps réel
+        // --- ECOUTE DES DONNEES ---
         onValue(ref(db, 'users'), (snapshot) => {
             const data = snapshot.val();
             window.users = data ? Object.keys(data).map(key => ({...data[key], fbKey: key})) : [];
@@ -251,9 +251,9 @@
             if(window.currentUser) updateStudentSidebar();
         });
 
-        // Fonctions Globales
+        // --- NAVIGATION ---
         window.showSection = (id) => {
-            ['student-login', 'login-admin', 'student-view', 'admin-panel'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         };
 
@@ -271,6 +271,7 @@
             }
         };
 
+        // --- GESTION DES COURS ---
         window.addSection = (title = "", content = "", level = "h1") => {
             window.sectionCount++;
             const id = 'editor-' + window.sectionCount;
@@ -288,9 +289,8 @@
                     </div>
                     <textarea id="${id}">${content}</textarea>
                     <div class="mt-4 flex gap-3">
-                        <span class="text-xs font-bold text-gray-400 uppercase self-center mr-2">Outils rapides :</span>
-                        <button onclick="insertBlock(${window.sectionCount}, 'nb')" class="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-200 transition">📝 Insérer NB</button>
-                        <button onclick="insertBlock(${window.sectionCount}, 'exo')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-200 transition">✍️ Insérer Exercice</button>
+                        <button onclick="insertBlock(${window.sectionCount}, 'nb')" class="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-bold">📝 NB</button>
+                        <button onclick="insertBlock(${window.sectionCount}, 'exo')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold">✍️ EXERCICE</button>
                     </div>
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
@@ -299,16 +299,15 @@
 
         window.insertBlock = (num, type) => {
             const editor = window.editors['editor-' + num];
-            const content = type === 'nb' 
-                ? '<div class="nb-block"><strong>NB :</strong> Saisir ici votre remarque...</div>' 
-                : '<div class="exercice-block"><strong>EXERCICE :</strong><br>Saisir l\'énoncé ici...</div>';
-            editor.model.insertContent(editor.data.toModel(editor.data.processor.toView(content)));
+            const html = type === 'nb' ? '<div class="nb-block"><strong>NB :</strong> Remarque...</div>' : '<div class="exercice-block"><strong>EXO :</strong> Énoncé...</div>';
+            const viewFragment = editor.data.processor.toView(html);
+            const modelFragment = editor.data.toModel(viewFragment);
+            editor.model.insertContent(modelFragment);
         };
 
         window.publishContent = () => {
             const fbKey = document.getElementById('edit-lesson-id').value;
             const lesson = {
-                id: fbKey ? fbKey : Date.now(),
                 cycle: document.getElementById('adm-cycle').value,
                 classe: document.getElementById('adm-classe').value,
                 matiere: document.getElementById('adm-matiere').value,
@@ -317,18 +316,19 @@
             };
 
             const blocks = document.querySelectorAll('#dynamic-sections-container > div');
-            if(blocks.length === 0 || !lesson.chapitre) return alert("Veuillez remplir le titre.");
+            if(!lesson.chapitre || blocks.length === 0) return alert("Veuillez remplir les champs obligatoires.");
 
             blocks.forEach(div => {
-                const level = div.querySelector('select').value;
-                const title = div.querySelector('input').value;
-                const body = window.editors[div.querySelector('textarea').id].getData();
-                lesson.sections.push({ level, title, body });
+                lesson.sections.push({
+                    level: div.querySelector('select').value,
+                    title: div.querySelector('input').value,
+                    body: window.editors[div.querySelector('textarea').id].getData()
+                });
             });
 
             const lessonRef = fbKey ? ref(db, 'lessons/' + fbKey) : push(ref(db, 'lessons'));
             set(lessonRef, lesson).then(() => {
-                alert("✅ Cours enregistré sur le cloud !");
+                alert("✅ Cours synchronisé avec succès !");
                 resetCourseForm();
                 switchTab('tab-library');
             });
@@ -336,7 +336,6 @@
 
         window.resetCourseForm = () => {
             document.getElementById('adm-classe').value = "";
-            document.getElementById('adm-matiere').value = "";
             document.getElementById('adm-chapitre').value = "";
             document.getElementById('edit-lesson-id').value = "";
             document.getElementById('dynamic-sections-container').innerHTML = "";
@@ -345,25 +344,26 @@
             addSection();
         };
 
+        // --- GESTION UTILISATEURS ---
         window.addNewUser = () => {
             const name = document.getElementById('new-user-name').value;
             const type = document.getElementById('new-user-type').value;
             const resp = document.getElementById('new-user-resp').value;
-            if(!name || !resp) return alert("Remplissez tout.");
-
-            const id = name.toLowerCase().replace(/\s/g, '').slice(0, 5) + Math.floor(10 + Math.random()*89);
+            if(!name || !resp) return alert("Champs vides.");
+            const id = name.toLowerCase().slice(0,5) + Math.floor(10+Math.random()*89);
             const pass = Math.random().toString(36).slice(-5).toUpperCase();
-
             push(ref(db, 'users'), { name, type, resp, id, pass, active: true });
             document.getElementById('new-user-name').value = "";
-            document.getElementById('new-user-resp').value = "";
+        };
+
+        window.toggleUser = (fbKey, currentStatus) => {
+            set(ref(db, 'users/' + fbKey + '/active'), !currentStatus);
         };
 
         window.loginUser = () => {
             const id = document.getElementById('stu-id').value;
             const pass = document.getElementById('stu-pass').value;
             const user = window.users.find(u => u.id === id && u.pass === pass);
-
             if(user && user.active) {
                 window.currentUser = user;
                 showSection('student-view');
@@ -373,71 +373,54 @@
             }
         };
 
-        window.updateStudentSidebar = () => {
-            const list = document.getElementById('course-list-sidebar');
-            const search = document.getElementById('user-course-search').value.toLowerCase();
-            list.innerHTML = "";
-            
-            let myLessons = window.publishedLessons.filter(l => {
-                if(window.currentUser.type === "Eleve") return l.classe.toLowerCase() === window.currentUser.resp.toLowerCase();
-                if(window.currentUser.type === "Enseignant") return l.matiere.toLowerCase() === window.currentUser.resp.toLowerCase();
-                return false;
-            });
-
-            myLessons.forEach(l => {
-                if(l.chapitre.toLowerCase().includes(search)) {
-                    list.innerHTML += `
-                    <li onclick="viewLesson('${l.fbKey}')" class="p-3 sidebar-link bg-slate-50 border-l-4 border-transparent hover:border-blue-900 group">
-                        <div class="text-xs text-gray-400 font-bold">${l.matiere.toUpperCase()}</div>
-                        <div class="text-sm font-semibold text-slate-700 group-hover:text-blue-900">${l.chapitre}</div>
-                    </li>`;
-                }
-            });
-        };
-
-        window.filterUserSidebar = () => updateStudentSidebar();
-
-        window.viewLesson = (fbKey) => {
-            const l = window.publishedLessons.find(lesson => lesson.fbKey === fbKey);
-            let h1=0, h2=0, h3=0;
-            let html = `<div class="mb-10"><nav class="text-xs font-bold text-blue-600 mb-4 bg-blue-50 px-3 py-1 rounded-full uppercase">${l.cycle} • ${l.classe} • ${l.matiere}</nav><h2 class="text-4xl font-extrabold text-slate-900">${l.chapitre}</h2></div>`;
-            
-            l.sections.forEach(s => {
-                let num = "";
-                if(s.level === 'h1') { h1++; h2=0; h3=0; num = `<span class="bg-blue-900 text-white px-3 py-1 rounded-lg mr-3">${h1}</span>`; }
-                else if(s.level === 'h2') { h2++; h3=0; num = `<span class="text-blue-600 mr-2">${h1}.${h2}</span>`; }
-                else { h3++; num = `<span class="text-gray-400 mr-2">${h1}.${h2}.${h3}</span>`; }
-                html += `<div class="mb-8"><div class="${s.level}-style flex items-center">${num}${s.title}</div><div class="mt-4 pl-0 md:pl-10 text-lg text-slate-700 prose max-w-none">${s.body}</div></div>`;
-            });
-            document.getElementById('course-display').innerHTML = html;
-        };
-
+        // --- AFFICHAGE ET TABLES ---
         window.renderUserTable = () => {
             const tbody = document.getElementById('students-table-body');
-            tbody.innerHTML = "";
-            window.users.forEach((u) => {
-                tbody.innerHTML += `<tr class="hover:bg-gray-50"><td class="p-4"><div class="font-bold">${u.name}</div><div class="text-xs uppercase text-gray-400">${u.type}</div></td><td class="p-4"><span class="bg-gray-100 px-2 py-1 rounded font-mono text-xs">${u.id}</span> <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded font-mono text-xs">${u.pass}</span></td><td class="p-4 text-sm">${u.resp}</td><td class="p-4"><button onclick="toggleUser('${u.fbKey}', ${u.active})" class="${u.active?'bg-green-100 text-green-700':'bg-red-100 text-red-700'} px-3 py-1 rounded-full text-xs font-bold">${u.active ? 'Actif' : 'Bloqué'}</button></td></tr>`;
-            });
-        };
-
-        window.toggleUser = (fbKey, currentStatus) => {
-            set(ref(db, 'users/' + fbKey + '/active'), !currentStatus);
+            tbody.innerHTML = window.users.map(u => `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-4"><div class="font-bold">${u.name}</div><div class="text-xs text-gray-400">${u.type}</div></td>
+                    <td class="p-4"><span class="bg-gray-100 p-1 font-mono text-xs">${u.id}</span> <span class="bg-blue-50 text-blue-700 p-1 font-mono text-xs">${u.pass}</span></td>
+                    <td class="p-4 text-sm">${u.resp}</td>
+                    <td class="p-4"><button onclick="toggleUser('${u.fbKey}', ${u.active})" class="${u.active?'text-green-600':'text-red-600'} text-xs font-bold">${u.active?'ACTIF':'BLOQUÉ'}</button></td>
+                </tr>`).join('');
         };
 
         window.renderLessonsTable = () => {
             const tbody = document.getElementById('lessons-table-body');
-            tbody.innerHTML = "";
-            window.publishedLessons.forEach(l => {
-                tbody.innerHTML += `<tr class="hover:bg-gray-50"><td class="p-4"><div class="text-xs font-bold text-gray-400 uppercase">${l.cycle} | ${l.classe} | ${l.matiere}</div><div class="text-lg font-bold">${l.chapitre}</div></td><td class="p-4 text-center"><div class="flex justify-center gap-2"><button onclick="editLesson('${l.fbKey}')" class="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition"><i class="fas fa-edit"></i></button><button onclick="deleteLesson('${l.fbKey}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-600 hover:text-white transition"><i class="fas fa-trash-alt"></i></button></div></td></tr>`;
-            });
+            tbody.innerHTML = window.publishedLessons.map(l => `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-4"><div class="text-xs font-bold text-gray-400">${l.cycle} | ${l.classe}</div><div class="text-lg font-bold">${l.chapitre}</div></td>
+                    <td class="p-4 text-center">
+                        <button onclick="editLesson('${l.fbKey}')" class="p-2 text-blue-600"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteLesson('${l.fbKey}')" class="p-2 text-red-600"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
         };
 
-        window.editLesson = (fbKey) => {
-            const l = window.publishedLessons.find(lesson => lesson.fbKey === fbKey);
-            document.getElementById('edit-lesson-id').value = fbKey;
+        window.updateStudentSidebar = () => {
+            const list = document.getElementById('course-list-sidebar');
+            const search = document.getElementById('user-course-search').value.toLowerCase();
+            list.innerHTML = window.publishedLessons
+                .filter(l => l.classe.toLowerCase() === window.currentUser.resp.toLowerCase() && l.chapitre.toLowerCase().includes(search))
+                .map(l => `<li onclick="viewLesson('${l.fbKey}')" class="p-3 sidebar-link bg-slate-50 border-l-4 border-blue-900 font-bold">${l.chapitre}</li>`).join('');
+        };
+
+        window.viewLesson = (key) => {
+            const l = window.publishedLessons.find(x => x.fbKey === key);
+            let h1=0, h2=0, h3=0;
+            let html = `<div class="mb-10"><h2 class="text-4xl font-extrabold text-slate-900">${l.chapitre}</h2></div>`;
+            l.sections.forEach(s => {
+                let num = s.level === 'h1' ? ++h1 : (s.level === 'h2' ? h1 + '.' + ++h2 : h1 + '.' + h2 + '.' + ++h3);
+                html += `<div class="mb-8"><div class="${s.level}-style"><span class="mr-2">${num}</span>${s.title}</div><div class="mt-4 prose max-w-none">${s.body}</div></div>`;
+            });
+            document.getElementById('course-display').innerHTML = html;
+        };
+
+        window.editLesson = (key) => {
+            const l = window.publishedLessons.find(x => x.fbKey === key);
+            document.getElementById('edit-lesson-id').value = key;
             document.getElementById('adm-cycle').value = l.cycle;
             document.getElementById('adm-classe').value = l.classe;
-            document.getElementById('adm-matiere').value = l.matiere;
             document.getElementById('adm-chapitre').value = l.chapitre;
             document.getElementById('dynamic-sections-container').innerHTML = "";
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
@@ -446,22 +429,9 @@
             switchTab('tab-create');
         };
 
-        window.deleteLesson = (fbKey) => {
-            if(confirm("Supprimer ce cours ?")) {
-                remove(ref(db, 'lessons/' + fbKey));
-            }
-        };
-
-        window.filterLessons = () => {
-            const cy = document.getElementById('filter-cycle').value.toLowerCase();
-            const cl = document.getElementById('filter-classe').value.toLowerCase();
-            const ma = document.getElementById('filter-matiere').value.toLowerCase();
-            const rows = document.querySelectorAll('#lessons-table-body tr');
-            window.publishedLessons.forEach((l, i) => {
-                const match = l.cycle.toLowerCase().includes(cy) && l.classe.toLowerCase().includes(cl) && l.matiere.toLowerCase().includes(ma);
-                rows[i].style.display = match ? '' : 'none';
-            });
-        };
+        window.deleteLesson = (key) => { if(confirm("Supprimer ce cours ?")) remove(ref(db, 'lessons/' + key)); };
+        window.filterUserSidebar = () => updateStudentSidebar();
+        window.filterLessons = () => renderLessonsTable();
     </script>
 </body>
 </html>
