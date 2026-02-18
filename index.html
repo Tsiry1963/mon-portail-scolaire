@@ -81,13 +81,13 @@
     </section>
 
     <section id="student-view" class="hidden container mx-auto mt-6 flex flex-col md:flex-row gap-6 px-4 pb-20">
-        <aside class="md:w-1/4 bg-white p-6 rounded-2xl shadow-md h-fit md:sticky md:top-24 border border-gray-100">
-            <h3 class="font-bold text-blue-900 mb-4 uppercase text-xs tracking-widest"><i class="fas fa-list mr-2"></i>Chapitres</h3>
+        <aside class="md:w-1/4 bg-white p-6 rounded-2xl shadow-md h-fit md:sticky md:top-24 border border-gray-100 max-h-[80vh] overflow-y-auto">
+            <h3 class="font-bold text-blue-900 mb-4 uppercase text-xs tracking-widest"><i class="fas fa-list mr-2"></i>Sommaire</h3>
             <div class="relative mb-4">
                 <input type="text" id="user-course-search" placeholder="Rechercher..." oninput="filterUserSidebar()" class="w-full pl-8 pr-3 py-2 bg-gray-50 border rounded-lg text-sm">
                 <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400"></i>
             </div>
-            <ul id="course-list-sidebar" class="space-y-1"></ul>
+            <div id="course-list-sidebar" class="space-y-4"></div>
         </aside>
         
         <main class="md:w-3/4 space-y-6">
@@ -245,7 +245,7 @@
         window.currentUser = null;
         window.currentLessonKey = null;
 
-        // --- ECOUTE ---
+        // --- ECOUTE FIREBASE ---
         onValue(ref(db, 'users'), (snapshot) => {
             const data = snapshot.val();
             window.users = data ? Object.keys(data).map(k => ({...data[k], fbKey: k})) : [];
@@ -264,7 +264,7 @@
             window.prepSheets = snapshot.val() || {};
         });
 
-        // --- NAVIGATION & LOGIQUE ---
+        // --- NAVIGATION ---
         window.showSection = (id) => {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
@@ -307,14 +307,14 @@
             document.getElementById('btn-view-prep').classList.toggle('border-b-2', view === 'prep');
         };
 
-        // --- FICHE DE PREPARATION ---
+        // --- FICHE DE PREPARATION (LOGIQUE FIXÉE) ---
         window.addPrepStep = (phase = "", teacher = "", student = "", med = "") => {
             const container = document.getElementById('prep-steps-container');
             const html = `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-2 bg-white p-2 border rounded mb-2">
-                    <input type="text" placeholder="Phase (ex: Enrôlement)" class="p-2 border rounded text-xs" value="${phase}">
-                    <textarea placeholder="Rôle enseignant" class="p-2 border rounded text-xs">${teacher}</textarea>
-                    <textarea placeholder="Tâche élève" class="p-2 border rounded text-xs">${student}</textarea>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2 bg-white p-2 border rounded mb-2 shadow-sm">
+                    <input type="text" placeholder="Phase" class="p-2 border rounded text-xs" value="${phase}">
+                    <textarea placeholder="Enseignant" class="p-2 border rounded text-xs">${teacher}</textarea>
+                    <textarea placeholder="Élève" class="p-2 border rounded text-xs">${student}</textarea>
                     <textarea placeholder="Médiation" class="p-2 border rounded text-xs">${med}</textarea>
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
@@ -324,25 +324,21 @@
             const prep = window.prepSheets[lessonId];
             const container = document.getElementById('prep-steps-container');
             container.innerHTML = "";
-            
             if(prep) {
                 document.getElementById('prep-date').value = prep.date || "";
                 document.getElementById('prep-obj-disc').value = prep.objDisc || "";
                 document.getElementById('prep-obj-lang').value = prep.objLang || "";
                 document.getElementById('prep-competences').value = prep.competences || "";
                 document.getElementById('prep-connaissances').value = prep.connaissances || "";
-                if(prep.steps) {
-                    prep.steps.forEach(s => addPrepStep(s.phase, s.teacher, s.student, s.med));
-                } else {
-                    addPrepStep();
-                }
+                if(prep.steps) prep.steps.forEach(s => addPrepStep(s.phase, s.teacher, s.student, s.med));
+                else addPrepStep();
             } else {
                 resetPrepForm(false);
             }
         };
 
-        function resetPrepForm(fullReset = true) {
-            if(fullReset) document.getElementById('prep-lesson-id').value = "";
+        function resetPrepForm(full = true) {
+            if(full) document.getElementById('prep-lesson-id').value = "";
             document.getElementById('prep-date').value = "";
             document.getElementById('prep-obj-disc').value = "";
             document.getElementById('prep-obj-lang').value = "";
@@ -355,13 +351,11 @@
         window.savePrepSheet = () => {
             const lessonId = document.getElementById('prep-lesson-id').value;
             if(!lessonId) return alert("Sélectionnez un cours.");
-            
             const steps = [];
             document.querySelectorAll('#prep-steps-container > div').forEach(div => {
-                const inputs = div.querySelectorAll('input, textarea');
-                steps.push({ phase: inputs[0].value, teacher: inputs[1].value, student: inputs[2].value, med: inputs[3].value });
+                const i = div.querySelectorAll('input, textarea');
+                steps.push({ phase: i[0].value, teacher: i[1].value, student: i[2].value, med: i[3].value });
             });
-
             const data = {
                 date: document.getElementById('prep-date').value,
                 objDisc: document.getElementById('prep-obj-disc').value,
@@ -370,45 +364,80 @@
                 connaissances: document.getElementById('prep-connaissances').value,
                 steps: steps
             };
-
             set(ref(db, 'prepSheets/' + lessonId), data).then(() => {
-                alert("Fiche enregistrée avec succès !");
-                resetPrepForm(true);
+                alert("Fiche enregistrée !");
+                resetPrepForm();
             });
         };
 
         window.populatePrepSelect = () => {
-            const select = document.getElementById('prep-lesson-id');
-            const currentVal = select.value;
-            select.innerHTML = '<option value="">-- Sélectionner un chapitre --</option>' + 
+            const s = document.getElementById('prep-lesson-id');
+            const cur = s.value;
+            s.innerHTML = '<option value="">-- Choisir un cours --</option>' + 
                 window.publishedLessons.map(l => `<option value="${l.fbKey}">${l.chapitre} (${l.classe})</option>`).join('');
-            if(currentVal) select.value = currentVal;
+            if(cur) s.value = cur;
         };
 
-        // --- GESTION COURS (ORIGINAL) ---
+        // --- ORGANISATION MENU LATERAL (MATIERE > CHAPITRE > TITRES) ---
+        window.updateStudentSidebar = () => {
+            const search = document.getElementById('user-course-search').value.toLowerCase();
+            const sidebar = document.getElementById('course-list-sidebar');
+            sidebar.innerHTML = "";
+
+            // Filtrer par classe de l'utilisateur
+            const myLessons = window.publishedLessons.filter(l => 
+                l.classe.toLowerCase() === window.currentUser.resp.toLowerCase() &&
+                (l.chapitre.toLowerCase().includes(search) || l.matiere.toLowerCase().includes(search))
+            );
+
+            // Grouper par Matière
+            const grouped = myLessons.reduce((acc, curr) => {
+                if(!acc[curr.matiere]) acc[curr.matiere] = [];
+                acc[curr.matiere].push(curr);
+                return acc;
+            }, {});
+
+            for (const matiere in grouped) {
+                let matiereHtml = `
+                    <div class="mb-4">
+                        <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-tighter mb-2 border-b border-blue-100 pb-1">${matiere}</h4>
+                        <div class="space-y-2">`;
+                
+                grouped[matiere].forEach(lesson => {
+                    matiereHtml += `
+                        <div class="group">
+                            <button onclick="viewLesson('${lesson.fbKey}')" class="w-full text-left p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-300 shadow-sm transition">
+                                <span class="text-xs font-bold text-slate-700 leading-tight">${lesson.chapitre}</span>
+                            </button>
+                            <ul class="ml-4 mt-1 space-y-1 border-l-2 border-slate-100 pl-2 hidden group-focus-within:block">
+                                ${lesson.sections.map(s => `<li class="text-[10px] text-slate-400 italic truncate">${s.title}</li>`).join('')}
+                            </ul>
+                        </div>`;
+                });
+                matiereHtml += `</div></div>`;
+                sidebar.insertAdjacentHTML('beforeend', matiereHtml);
+            }
+        };
+
+        // --- GESTION CONTENU ---
         window.addSection = (title = "", content = "", level = "h1") => {
             window.sectionCount++;
             const id = 'editor-' + window.sectionCount;
-            const container = document.getElementById('dynamic-sections-container');
             const html = `
                 <div id="block-${window.sectionCount}" class="p-4 bg-white border rounded-xl relative shadow-sm">
                     <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full">×</button>
-                    <div class="flex flex-col md:flex-row gap-2 mb-2">
-                        <select class="p-2 border rounded text-sm font-bold bg-blue-50">
-                            <option value="h1" ${level=='h1'?'selected':''}>Titre I</option>
-                            <option value="h2" ${level=='h2'?'selected':''}>Sous-titre A</option>
-                            <option value="h3" ${level=='h3'?'selected':''}>Petit 1</option>
-                        </select>
-                        <input type="text" value="${title}" placeholder="Titre..." class="flex-1 p-2 font-bold border-b">
+                    <div class="flex gap-2 mb-2">
+                        <select class="p-2 border rounded text-xs bg-blue-50"><option value="h1" ${level=='h1'?'selected':''}>Titre I</option><option value="h2" ${level=='h2'?'selected':''}>Sous-titre A</option><option value="h3" ${level=='h3'?'selected':''}>Petit 1</option></select>
+                        <input type="text" value="${title}" placeholder="Titre..." class="flex-1 p-2 font-bold border-b text-sm">
                     </div>
                     <textarea id="${id}">${content}</textarea>
                 </div>`;
-            container.insertAdjacentHTML('beforeend', html);
+            document.getElementById('dynamic-sections-container').insertAdjacentHTML('beforeend', html);
             ClassicEditor.create(document.querySelector(`#${id}`)).then(ed => window.editors[id] = ed);
         };
 
         window.publishContent = () => {
-            const fbKey = document.getElementById('edit-lesson-id').value;
+            const key = document.getElementById('edit-lesson-id').value;
             const lesson = {
                 cycle: document.getElementById('adm-cycle').value,
                 classe: document.getElementById('adm-classe').value,
@@ -417,82 +446,26 @@
                 sections: []
             };
             document.querySelectorAll('#dynamic-sections-container > div').forEach(div => {
-                const editorId = div.querySelector('textarea').id;
-                lesson.sections.push({
-                    level: div.querySelector('select').value,
-                    title: div.querySelector('input').value,
-                    body: window.editors[editorId].getData()
-                });
+                const edId = div.querySelector('textarea').id;
+                lesson.sections.push({ level: div.querySelector('select').value, title: div.querySelector('input').value, body: window.editors[edId].getData() });
             });
-            const lessonRef = fbKey ? ref(db, 'lessons/' + fbKey) : push(ref(db, 'lessons'));
-            set(lessonRef, lesson).then(() => { alert("Cours enregistré !"); resetCourseForm(); switchTab('tab-library'); });
+            const refL = key ? ref(db, 'lessons/' + key) : push(ref(db, 'lessons'));
+            set(refL, lesson).then(() => { alert("Enregistré !"); resetCourseForm(); switchTab('tab-library'); });
         };
 
         window.resetCourseForm = () => {
             document.getElementById('dynamic-sections-container').innerHTML = "";
             document.getElementById('edit-lesson-id').value = "";
             document.getElementById('adm-chapitre').value = "";
-            document.getElementById('adm-classe').value = "";
-            document.getElementById('adm-matiere').value = "";
             window.sectionCount = 0; window.editors = {};
             addSection();
-        };
-
-        // --- ACTIONS UTILISATEURS ---
-        window.addNewUser = () => {
-            const name = document.getElementById('new-user-name').value;
-            const type = document.getElementById('new-user-type').value;
-            const resp = document.getElementById('new-user-resp').value;
-            if(!name) return;
-            const id = name.toLowerCase().slice(0,4).replace(/\s/g, '') + Math.floor(100+Math.random()*899);
-            const pass = Math.random().toString(36).slice(-5).toUpperCase();
-            push(ref(db, 'users'), { name, type, resp, id, pass, active: true });
-            document.getElementById('new-user-name').value = "";
-            document.getElementById('new-user-resp').value = "";
-        };
-
-        window.deleteUser = (key) => { if(confirm("Supprimer définitivement cet utilisateur ?")) remove(ref(db, 'users/' + key)); };
-        window.toggleUser = (key, status) => { set(ref(db, 'users/' + key + '/active'), !status); };
-
-        // --- AFFICHAGE ---
-        window.renderUserTable = () => {
-            document.getElementById('students-table-body').innerHTML = window.users.map(u => `
-                <tr>
-                    <td class="p-4"><b>${u.name}</b></td>
-                    <td class="p-4"><code class="bg-gray-100 p-1">${u.id} / ${u.pass}</code></td>
-                    <td class="p-4">${u.type} (${u.resp})</td>
-                    <td class="p-4 flex gap-2">
-                        <button onclick="toggleUser('${u.fbKey}', ${u.active})" class="text-xs ${u.active?'text-green-600':'text-red-500'}">${u.active?'Actif':'Bloqué'}</button>
-                        <button onclick="deleteUser('${u.fbKey}')" class="text-xs text-red-700 font-bold"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`).join('');
-        };
-
-        window.renderLessonsTable = () => {
-            document.getElementById('lessons-table-body').innerHTML = window.publishedLessons.map(l => `
-                <tr>
-                    <td class="p-4"><b>${l.chapitre}</b><br><small>${l.cycle} - ${l.classe}</small></td>
-                    <td class="p-4 text-center">
-                        <button onclick="editLesson('${l.fbKey}')" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteLesson('${l.fbKey}')" class="text-red-600"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`).join('');
-        };
-
-        window.updateStudentSidebar = () => {
-            const search = document.getElementById('user-course-search').value.toLowerCase();
-            document.getElementById('course-list-sidebar').innerHTML = window.publishedLessons
-                .filter(l => l.classe.toLowerCase() === window.currentUser.resp.toLowerCase() && l.chapitre.toLowerCase().includes(search))
-                .map(l => `<li onclick="viewLesson('${l.fbKey}')" class="p-3 sidebar-link bg-slate-50 border-l-4 border-blue-900 font-bold text-sm">${l.chapitre}</li>`).join('');
         };
 
         window.viewLesson = (key) => {
             window.currentLessonKey = key;
             const l = window.publishedLessons.find(x => x.fbKey === key);
-            let html = `<h2 class="text-3xl font-bold mb-6">${l.chapitre}</h2>`;
-            l.sections.forEach(s => {
-                html += `<div class="mb-6"><div class="${s.level}-style">${s.title}</div><div class="mt-2">${s.body}</div></div>`;
-            });
+            let html = `<h2 class="text-2xl font-black text-blue-900 mb-6 border-b-4 border-blue-900 pb-2">${l.chapitre}</h2>`;
+            l.sections.forEach(s => { html += `<div class="mb-8"><div class="${s.level}-style">${s.title}</div><div class="mt-3 leading-relaxed">${s.body}</div></div>`; });
             document.getElementById('user-content-area').innerHTML = html;
             renderPrepSheetForUser(key);
             switchUserView('content');
@@ -500,63 +473,55 @@
 
         function renderPrepSheetForUser(lessonKey) {
             const prep = window.prepSheets[lessonKey];
-            const renderDiv = document.getElementById('prep-sheet-render');
+            const div = document.getElementById('prep-sheet-render');
             const lesson = window.publishedLessons.find(x => x.fbKey === lessonKey);
-
-            if(!prep) {
-                renderDiv.innerHTML = "<p class='text-gray-400 italic'>Aucune fiche de préparation disponible pour ce chapitre.</p>";
-                return;
-            }
-
-            let stepsHtml = prep.steps.map(s => `
-                <tr>
-                    <td class="font-bold">${s.phase}</td>
-                    <td>${s.teacher}</td>
-                    <td>${s.student}</td>
-                    <td>${s.med}</td>
-                </tr>`).join('');
-
-            renderDiv.innerHTML = `
+            if(!prep) { div.innerHTML = "<p class='text-gray-400 italic'>Aucune fiche de préparation disponible.</p>"; return; }
+            let st = prep.steps.map(s => `<tr><td class="font-bold">${s.phase}</td><td>${s.teacher}</td><td>${s.student}</td><td>${s.med}</td></tr>`).join('');
+            div.innerHTML = `
                 <div id="pdf-content" class="bg-white p-4 border border-black">
                     <table class="prep-table">
-                        <tr><td colspan="2"><b>Niveau :</b> ${lesson.classe}</td><td colspan="2" rowspan="2" class="text-center text-lg"><b>${lesson.chapitre}</b></td><td rowspan="2"><b>Date :</b> ${prep.date}</td></tr>
-                        <tr><td colspan="2"><b>Discipline :</b> ${lesson.matiere}</td></tr>
-                        <tr><td colspan="2"><b>Objectif disciplinaire :</b><br>${prep.objDisc}</td><td colspan="3"><b>Connaissances :</b><br>${prep.connaissances}</td></tr>
-                        <tr><td colspan="2"><b>Objectif langagier :</b><br>${prep.objLang}</td><td colspan="3"><b>Compétences :</b><br>${prep.competences}</td></tr>
+                        <tr><td colspan="2"><b>Classe :</b> ${lesson.classe}</td><td colspan="2" class="text-center font-bold">${lesson.chapitre}</td><td><b>Date :</b> ${prep.date}</td></tr>
+                        <tr><td colspan="5"><b>Objectifs :</b> ${prep.objDisc}</td></tr>
                     </table>
-                    <table class="prep-table mt-4">
-                        <tr class="prep-header"><td>Phase</td><td>Rôle Enseignant</td><td>Tâche Élève</td><td>Médiation</td></tr>
-                        ${stepsHtml}
-                    </table>
+                    <table class="prep-table mt-4"><tr class="prep-header"><td>Phase</td><td>Rôle Enseignant</td><td>Tâche Élève</td><td>Médiation</td></tr>${st}</table>
                 </div>`;
         }
 
         window.requestPdfDownload = () => {
-            const code = prompt("Veuillez saisir le code d'autorisation administrateur pour le téléchargement PDF :");
-            if(code === "Tsiry@PDF") {
-                const element = document.getElementById('pdf-content');
-                if(!element) return alert("Rien à télécharger.");
-                const opt = { margin: 10, filename: 'Fiche_Preparation.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
-                html2pdf().set(opt).from(element).save();
-            } else {
-                alert("Code incorrect.");
+            if(prompt("Code PDF :") === "Tsiry@PDF") {
+                html2pdf().set({ margin: 10, filename: 'Prep.pdf', jsPDF: { format: 'a4', orientation: 'landscape' } }).from(document.getElementById('pdf-content')).save();
             }
         };
 
-        window.editLesson = (key) => {
-            const l = window.publishedLessons.find(x => x.fbKey === key);
-            document.getElementById('edit-lesson-id').value = key;
+        window.addNewUser = () => {
+            const n = document.getElementById('new-user-name').value;
+            const t = document.getElementById('new-user-type').value;
+            const r = document.getElementById('new-user-resp').value;
+            if(!n) return;
+            const id = n.toLowerCase().slice(0,4).replace(/\s/g,'') + Math.floor(100+Math.random()*899);
+            push(ref(db, 'users'), { name: n, type: t, resp: r, id: id, pass: Math.random().toString(36).slice(-5).toUpperCase(), active: true });
+        };
+
+        window.deleteUser = (k) => { if(confirm("Supprimer ?")) remove(ref(db, 'users/' + k)); };
+        window.toggleUser = (k, s) => set(ref(db, 'users/' + k + '/active'), !s);
+        window.editLesson = (k) => {
+            const l = window.publishedLessons.find(x => x.fbKey === k);
+            document.getElementById('edit-lesson-id').value = k;
             document.getElementById('adm-cycle').value = l.cycle;
             document.getElementById('adm-classe').value = l.classe;
             document.getElementById('adm-matiere').value = l.matiere;
             document.getElementById('adm-chapitre').value = l.chapitre;
             document.getElementById('dynamic-sections-container').innerHTML = "";
-            document.getElementById('btn-cancel-edit').classList.remove('hidden');
             l.sections.forEach(s => addSection(s.title, s.body, s.level));
             switchTab('tab-create');
         };
-
-        window.deleteLesson = (key) => { if(confirm("Supprimer ?")) { remove(ref(db, 'lessons/' + key)); remove(ref(db, 'prepSheets/' + key)); } };
+        window.deleteLesson = (k) => { if(confirm("Supprimer ?")) { remove(ref(db, 'lessons/' + k)); remove(ref(db, 'prepSheets/' + k)); } };
+        window.renderUserTable = () => {
+            document.getElementById('students-table-body').innerHTML = window.users.map(u => `<tr><td class="p-4">${u.name}</td><td class="p-4"><code>${u.id}/${u.pass}</code></td><td class="p-4">${u.type}</td><td class="p-4"><button onclick="toggleUser('${u.fbKey}',${u.active})">${u.active?'Bloquer':'Activer'}</button></td></tr>`).join('');
+        };
+        window.renderLessonsTable = () => {
+            document.getElementById('lessons-table-body').innerHTML = window.publishedLessons.map(l => `<tr><td class="p-4"><b>${l.chapitre}</b> (${l.matiere})</td><td class="p-4 text-center"><button onclick="editLesson('${l.fbKey}')" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button onclick="deleteLesson('${l.fbKey}')" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+        };
         window.filterUserSidebar = () => updateStudentSidebar();
     </script>
 </body>
