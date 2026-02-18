@@ -3,52 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Système Scolaire Dynamique - Local Storage</title>
+    <title>Système Scolaire Dynamique - Cloud Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
-    <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-  import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
-
-  // Collez ici votre firebaseConfig récupéré à l'étape 2
-  const firebaseConfig = {
-    apiKey: "VOTRE_API_KEY",
-    authDomain: "VOTRE_PROJET.firebaseapp.com",
-    databaseURL: "https://VOTRE_PROJET.firebaseio.com",
-    projectId: "VOTRE_PROJET",
-    storageBucket: "VOTRE_PROJET.appspot.com",
-    messagingSenderId: "VOTRE_ID",
-    appId: "VOTRE_APP_ID"
-  };
-
-  // Initialisation
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  // Rendre les fonctions accessibles globalement pour vos boutons
-  window.publishContent = () => {
-      const lesson = {
-          cycle: document.getElementById('adm-cycle').value,
-          chapitre: document.getElementById('adm-chapitre').value,
-          // ... récupérez les autres champs comme avant
-      };
-      
-      // Envoi vers Firebase au lieu de localStorage
-      const lessonsRef = ref(db, 'lessons/');
-      const newLessonRef = push(lessonsRef);
-      set(newLessonRef, lesson).then(() => alert("Cours publié partout !"));
-  };
-
-  // Synchronisation en temps réel (pour les élèves)
-  onValue(ref(db, 'lessons/'), (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-          publishedLessons = Object.values(data);
-          updateStudentSidebar(); // Met à jour l'affichage automatiquement
-      }
-  });
-</script>
-
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -56,7 +13,7 @@
         body { font-family: 'Inter', sans-serif; }
         .sidebar-link { transition: all 0.3s; border-radius: 8px; margin-bottom: 4px; }
         .sidebar-link:hover { background-color: #e2e8f0; color: #1e3a8a; cursor: pointer; transform: translateX(5px); }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         .ck-editor__editable { min-height: 250px; border-radius: 0 0 8px 8px !important; }
         
         /* Blocs de contenu */
@@ -73,7 +30,7 @@
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen" onload="initApp()">
+<body class="bg-slate-100 text-slate-800 min-h-screen">
 
     <nav class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-4 sticky top-0 z-50 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
@@ -255,43 +212,70 @@
         </div>
     </section>
 
-    <script>
-        let editors = {};
-        let sectionCount = 0;
-        let users = JSON.parse(localStorage.getItem('users')) || [];
-        let publishedLessons = JSON.parse(localStorage.getItem('lessons')) || [];
-        let currentUser = null;
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
-        function initApp() {
+        const firebaseConfig = {
+            apiKey: "VOTRE_API_KEY",
+            authDomain: "VOTRE_PROJET.firebaseapp.com",
+            databaseURL: "https://VOTRE_PROJET.firebaseio.com",
+            projectId: "VOTRE_PROJET",
+            storageBucket: "VOTRE_PROJET.appspot.com",
+            messagingSenderId: "VOTRE_ID",
+            appId: "VOTRE_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Variables Globales
+        window.editors = {};
+        window.sectionCount = 0;
+        window.users = [];
+        window.publishedLessons = [];
+        window.currentUser = null;
+
+        // Écouter les données en temps réel
+        onValue(ref(db, 'users'), (snapshot) => {
+            const data = snapshot.val();
+            window.users = data ? Object.keys(data).map(key => ({...data[key], fbKey: key})) : [];
             renderUserTable();
-            renderLessonsTable();
-        }
+        });
 
-        function showSection(id) {
+        onValue(ref(db, 'lessons'), (snapshot) => {
+            const data = snapshot.val();
+            window.publishedLessons = data ? Object.keys(data).map(key => ({...data[key], fbKey: key})) : [];
+            renderLessonsTable();
+            if(window.currentUser) updateStudentSidebar();
+        });
+
+        // Fonctions Globales
+        window.showSection = (id) => {
             ['student-login', 'login-admin', 'student-view', 'admin-panel'].forEach(s => document.getElementById(s).classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
-        }
+        };
 
-        function switchTab(tabId) {
+        window.switchTab = (tabId) => {
             document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
             document.querySelectorAll('[id^="btn-tab-"]').forEach(b => b.classList.remove('tab-active'));
             document.getElementById(tabId).classList.remove('hidden');
             document.getElementById('btn-' + tabId).classList.add('tab-active');
-        }
+        };
 
-        function checkAdminPass() {
+        window.checkAdminPass = () => {
             if(document.getElementById('admin-pass').value === 'Tsiry@1963!') {
                 showSection('admin-panel');
-                if(sectionCount === 0) addSection();
+                if(window.sectionCount === 0) addSection();
             }
-        }
+        };
 
-        function addSection(title = "", content = "", level = "h1") {
-            sectionCount++;
-            const id = 'editor-' + sectionCount;
+        window.addSection = (title = "", content = "", level = "h1") => {
+            window.sectionCount++;
+            const id = 'editor-' + window.sectionCount;
             const container = document.getElementById('dynamic-sections-container');
             const html = `
-                <div id="block-${sectionCount}" class="p-6 bg-white border border-gray-200 rounded-2xl relative shadow-sm hover:shadow-md transition">
+                <div id="block-${window.sectionCount}" class="p-6 bg-white border border-gray-200 rounded-2xl relative shadow-sm hover:shadow-md transition">
                     <button onclick="this.parentElement.remove()" class="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full shadow-lg hover:scale-110 transition">×</button>
                     <div class="flex flex-col md:flex-row gap-4 mb-4">
                         <select class="p-2 border rounded-lg text-sm font-bold bg-blue-50 text-blue-900 outline-none w-full md:w-40">
@@ -304,26 +288,26 @@
                     <textarea id="${id}">${content}</textarea>
                     <div class="mt-4 flex gap-3">
                         <span class="text-xs font-bold text-gray-400 uppercase self-center mr-2">Outils rapides :</span>
-                        <button onclick="insertBlock(${sectionCount}, 'nb')" class="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-200 transition">📝 Insérer NB</button>
-                        <button onclick="insertBlock(${sectionCount}, 'exo')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-200 transition">✍️ Insérer Exercice</button>
+                        <button onclick="insertBlock(${window.sectionCount}, 'nb')" class="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-200 transition">📝 Insérer NB</button>
+                        <button onclick="insertBlock(${window.sectionCount}, 'exo')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-200 transition">✍️ Insérer Exercice</button>
                     </div>
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
-            ClassicEditor.create(document.querySelector(`#${id}`)).then(ed => editors[id] = ed);
-        }
+            ClassicEditor.create(document.querySelector(`#${id}`)).then(ed => window.editors[id] = ed);
+        };
 
-        function insertBlock(num, type) {
-            const editor = editors['editor-' + num];
+        window.insertBlock = (num, type) => {
+            const editor = window.editors['editor-' + num];
             const content = type === 'nb' 
                 ? '<div class="nb-block"><strong>NB :</strong> Saisir ici votre remarque...</div>' 
                 : '<div class="exercice-block"><strong>EXERCICE :</strong><br>Saisir l\'énoncé ici...</div>';
             editor.model.insertContent(editor.data.toModel(editor.data.processor.toView(content)));
-        }
+        };
 
-        function publishContent() {
-            const editId = document.getElementById('edit-lesson-id').value;
+        window.publishContent = () => {
+            const fbKey = document.getElementById('edit-lesson-id').value;
             const lesson = {
-                id: editId ? parseInt(editId) : Date.now(),
+                id: fbKey ? fbKey : Date.now(),
                 cycle: document.getElementById('adm-cycle').value,
                 classe: document.getElementById('adm-classe').value,
                 matiere: document.getElementById('adm-matiere').value,
@@ -332,219 +316,151 @@
             };
 
             const blocks = document.querySelectorAll('#dynamic-sections-container > div');
-            if(blocks.length === 0 || !lesson.chapitre) {
-                alert("Veuillez remplir au moins le titre et un bloc de contenu.");
-                return;
-            }
+            if(blocks.length === 0 || !lesson.chapitre) return alert("Veuillez remplir le titre.");
 
             blocks.forEach(div => {
                 const level = div.querySelector('select').value;
                 const title = div.querySelector('input').value;
-                const body = editors[div.querySelector('textarea').id].getData();
+                const body = window.editors[div.querySelector('textarea').id].getData();
                 lesson.sections.push({ level, title, body });
             });
 
-            if(editId) {
-                publishedLessons = publishedLessons.map(l => l.id == editId ? lesson : l);
-            } else {
-                publishedLessons.push(lesson);
-            }
+            const lessonRef = fbKey ? ref(db, 'lessons/' + fbKey) : push(ref(db, 'lessons'));
+            set(lessonRef, lesson).then(() => {
+                alert("✅ Cours enregistré sur le cloud !");
+                resetCourseForm();
+                switchTab('tab-library');
+            });
+        };
 
-            localStorage.setItem('lessons', JSON.stringify(publishedLessons));
-            alert("✅ Le cours a été sauvegardé avec succès !");
-            resetCourseForm();
-            renderLessonsTable();
-            switchTab('tab-library');
-        }
-
-        
-        function resetCourseForm() {
+        window.resetCourseForm = () => {
             document.getElementById('adm-classe').value = "";
             document.getElementById('adm-matiere').value = "";
             document.getElementById('adm-chapitre').value = "";
             document.getElementById('edit-lesson-id').value = "";
             document.getElementById('dynamic-sections-container').innerHTML = "";
             document.getElementById('btn-cancel-edit').classList.add('hidden');
-            sectionCount = 0; editors = {};
+            window.sectionCount = 0; window.editors = {};
             addSection();
-        }
+        };
 
-        function addNewUser() {
+        window.addNewUser = () => {
             const name = document.getElementById('new-user-name').value;
             const type = document.getElementById('new-user-type').value;
             const resp = document.getElementById('new-user-resp').value;
-            if(!name || !resp) return alert("Remplissez tous les champs");
+            if(!name || !resp) return alert("Remplissez tout.");
 
             const id = name.toLowerCase().replace(/\s/g, '').slice(0, 5) + Math.floor(10 + Math.random()*89);
             const pass = Math.random().toString(36).slice(-5).toUpperCase();
 
-            users.push({ name, type, resp, id, pass, active: true });
-            localStorage.setItem('users', JSON.stringify(users));
-            renderUserTable();
+            push(ref(db, 'users'), { name, type, resp, id, pass, active: true });
             document.getElementById('new-user-name').value = "";
             document.getElementById('new-user-resp').value = "";
-        }
+        };
 
-        function loginUser() {
+        window.loginUser = () => {
             const id = document.getElementById('stu-id').value;
             const pass = document.getElementById('stu-pass').value;
-            const user = users.find(u => u.id === id && u.pass === pass);
+            const user = window.users.find(u => u.id === id && u.pass === pass);
 
             if(user && user.active) {
-                currentUser = user;
+                window.currentUser = user;
                 showSection('student-view');
                 updateStudentSidebar();
             } else {
                 document.getElementById('stu-error').classList.remove('hidden');
             }
-        }
+        };
 
-        function updateStudentSidebar() {
+        window.updateStudentSidebar = () => {
             const list = document.getElementById('course-list-sidebar');
             const search = document.getElementById('user-course-search').value.toLowerCase();
             list.innerHTML = "";
             
-            let myLessons = publishedLessons.filter(l => {
-                if(currentUser.type === "Eleve") return l.classe.toLowerCase() === currentUser.resp.toLowerCase();
-                if(currentUser.type === "Enseignant") return l.matiere.toLowerCase() === currentUser.resp.toLowerCase();
+            let myLessons = window.publishedLessons.filter(l => {
+                if(window.currentUser.type === "Eleve") return l.classe.toLowerCase() === window.currentUser.resp.toLowerCase();
+                if(window.currentUser.type === "Enseignant") return l.matiere.toLowerCase() === window.currentUser.resp.toLowerCase();
                 return false;
             });
 
             myLessons.forEach(l => {
-                const matchTitle = l.sections.some(s => s.title.toLowerCase().includes(search));
-                if(l.chapitre.toLowerCase().includes(search) || matchTitle) {
+                if(l.chapitre.toLowerCase().includes(search)) {
                     list.innerHTML += `
-                    <li onclick="viewLesson(${l.id})" class="p-3 sidebar-link bg-slate-50 border-l-4 border-transparent hover:border-blue-900 group">
+                    <li onclick="viewLesson('${l.fbKey}')" class="p-3 sidebar-link bg-slate-50 border-l-4 border-transparent hover:border-blue-900 group">
                         <div class="text-xs text-gray-400 font-bold">${l.matiere.toUpperCase()}</div>
                         <div class="text-sm font-semibold text-slate-700 group-hover:text-blue-900">${l.chapitre}</div>
                     </li>`;
                 }
             });
-        }
+        };
 
-        function filterUserSidebar() { updateStudentSidebar(); }
+        window.filterUserSidebar = () => updateStudentSidebar();
 
-        function viewLesson(id) {
-            const l = publishedLessons.find(lesson => lesson.id == id);
+        window.viewLesson = (fbKey) => {
+            const l = window.publishedLessons.find(lesson => lesson.fbKey === fbKey);
             let h1=0, h2=0, h3=0;
-            let html = `
-                <div class="mb-10">
-                    <nav class="flex gap-2 text-xs font-bold text-blue-600 mb-4 bg-blue-50 w-fit px-3 py-1 rounded-full uppercase tracking-widest">
-                        <span>${l.cycle}</span> • <span>${l.classe}</span> • <span>${l.matiere}</span>
-                    </nav>
-                    <h2 class="text-4xl font-extrabold text-slate-900 leading-tight">${l.chapitre}</h2>
-                </div>`;
+            let html = `<div class="mb-10"><nav class="text-xs font-bold text-blue-600 mb-4 bg-blue-50 px-3 py-1 rounded-full uppercase">${l.cycle} • ${l.classe} • ${l.matiere}</nav><h2 class="text-4xl font-extrabold text-slate-900">${l.chapitre}</h2></div>`;
             
             l.sections.forEach(s => {
                 let num = "";
                 if(s.level === 'h1') { h1++; h2=0; h3=0; num = `<span class="bg-blue-900 text-white px-3 py-1 rounded-lg mr-3">${h1}</span>`; }
                 else if(s.level === 'h2') { h2++; h3=0; num = `<span class="text-blue-600 mr-2">${h1}.${h2}</span>`; }
                 else { h3++; num = `<span class="text-gray-400 mr-2">${h1}.${h2}.${h3}</span>`; }
-                
-                html += `
-                <div class="mb-8 animate-in fade-in duration-500">
-                    <div class="${s.level}-style flex items-center">${num}${s.title}</div>
-                    <div class="mt-4 pl-0 md:pl-10 text-lg leading-relaxed text-slate-700 prose prose-slate max-w-none">${s.body}</div>
-                </div>`;
+                html += `<div class="mb-8"><div class="${s.level}-style flex items-center">${num}${s.title}</div><div class="mt-4 pl-0 md:pl-10 text-lg text-slate-700 prose max-w-none">${s.body}</div></div>`;
             });
             document.getElementById('course-display').innerHTML = html;
-            window.scrollTo({top: 0, behavior: 'smooth'});
-        }
+        };
 
-        function renderUserTable() {
+        window.renderUserTable = () => {
             const tbody = document.getElementById('students-table-body');
             tbody.innerHTML = "";
-            users.forEach((u, i) => {
-                tbody.innerHTML += `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="p-4">
-                        <div class="font-bold text-slate-800">${u.name}</div>
-                        <div class="text-xs text-slate-400 uppercase tracking-tighter">${u.type}</div>
-                    </td>
-                    <td class="p-4">
-                        <div class="flex items-center gap-2">
-                           <span class="bg-gray-100 px-2 py-1 rounded font-mono text-xs font-bold">${u.id}</span>
-                           <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded font-mono text-xs font-bold">${u.pass}</span>
-                        </div>
-                    </td>
-                    <td class="p-4">
-                        <span class="text-sm font-medium text-slate-600">${u.resp}</span>
-                    </td>
-                    <td class="p-4">
-                        <button onclick="toggleUser(${i})" class="${u.active?'bg-green-100 text-green-700':'bg-red-100 text-red-700'} px-3 py-1 rounded-full text-xs font-bold transition">
-                            ${u.active ? '<i class="fas fa-check-circle mr-1"></i>Actif' : '<i class="fas fa-ban mr-1"></i>Bloqué'}
-                        </button>
-                    </td>
-                </tr>`;
+            window.users.forEach((u) => {
+                tbody.innerHTML += `<tr class="hover:bg-gray-50"><td class="p-4"><div class="font-bold">${u.name}</div><div class="text-xs uppercase text-gray-400">${u.type}</div></td><td class="p-4"><span class="bg-gray-100 px-2 py-1 rounded font-mono text-xs">${u.id}</span> <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded font-mono text-xs">${u.pass}</span></td><td class="p-4 text-sm">${u.resp}</td><td class="p-4"><button onclick="toggleUser('${u.fbKey}', ${u.active})" class="${u.active?'bg-green-100 text-green-700':'bg-red-100 text-red-700'} px-3 py-1 rounded-full text-xs font-bold">${u.active ? 'Actif' : 'Bloqué'}</button></td></tr>`;
             });
-        }
+        };
 
-        function toggleUser(i) {
-            users[i].active = !users[i].active;
-            localStorage.setItem('users', JSON.stringify(users));
-            renderUserTable();
-        }
+        window.toggleUser = (fbKey, currentStatus) => {
+            set(ref(db, 'users/' + fbKey + '/active'), !currentStatus);
+        };
 
-        function renderLessonsTable() {
+        window.renderLessonsTable = () => {
             const tbody = document.getElementById('lessons-table-body');
             tbody.innerHTML = "";
-            publishedLessons.forEach(l => {
-                tbody.innerHTML += `
-                <tr class="hover:bg-gray-50">
-                    <td class="p-4">
-                        <div class="text-xs font-bold text-gray-400 uppercase">${l.cycle} | ${l.classe} | ${l.matiere}</div>
-                        <div class="text-lg font-bold text-slate-800">${l.chapitre}</div>
-                    </td>
-                    <td class="p-4 text-center">
-                        <div class="flex justify-center gap-2">
-                            <button onclick="editLesson(${l.id})" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="deleteLesson(${l.id})" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>`;
+            window.publishedLessons.forEach(l => {
+                tbody.innerHTML += `<tr class="hover:bg-gray-50"><td class="p-4"><div class="text-xs font-bold text-gray-400 uppercase">${l.cycle} | ${l.classe} | ${l.matiere}</div><div class="text-lg font-bold">${l.chapitre}</div></td><td class="p-4 text-center"><div class="flex justify-center gap-2"><button onclick="editLesson('${l.fbKey}')" class="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-600 hover:text-white transition"><i class="fas fa-edit"></i></button><button onclick="deleteLesson('${l.fbKey}')" class="p-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-600 hover:text-white transition"><i class="fas fa-trash-alt"></i></button></div></td></tr>`;
             });
-        }
+        };
 
-        function editLesson(id) {
-            const l = publishedLessons.find(lesson => lesson.id == id);
-            document.getElementById('edit-lesson-id').value = l.id;
+        window.editLesson = (fbKey) => {
+            const l = window.publishedLessons.find(lesson => lesson.fbKey === fbKey);
+            document.getElementById('edit-lesson-id').value = fbKey;
             document.getElementById('adm-cycle').value = l.cycle;
             document.getElementById('adm-classe').value = l.classe;
             document.getElementById('adm-matiere').value = l.matiere;
             document.getElementById('adm-chapitre').value = l.chapitre;
             document.getElementById('dynamic-sections-container').innerHTML = "";
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
-            sectionCount = 0; editors = {};
+            window.sectionCount = 0; window.editors = {};
             l.sections.forEach(s => addSection(s.title, s.body, s.level));
             switchTab('tab-create');
-            window.scrollTo({top: 0, behavior: 'smooth'});
-        }
+        };
 
-        function deleteLesson(id) {
-            if(confirm("❗ Êtes-vous sûr de vouloir supprimer définitivement ce cours ?")) {
-                publishedLessons = publishedLessons.filter(l => l.id != id);
-                localStorage.setItem('lessons', JSON.stringify(publishedLessons));
-                renderLessonsTable();
+        window.deleteLesson = (fbKey) => {
+            if(confirm("Supprimer ce cours ?")) {
+                remove(ref(db, 'lessons/' + fbKey));
             }
-        }
+        };
 
-        function filterLessons() {
+        window.filterLessons = () => {
             const cy = document.getElementById('filter-cycle').value.toLowerCase();
             const cl = document.getElementById('filter-classe').value.toLowerCase();
             const ma = document.getElementById('filter-matiere').value.toLowerCase();
-            
             const rows = document.querySelectorAll('#lessons-table-body tr');
-            publishedLessons.forEach((l, i) => {
-                const match = l.cycle.toLowerCase().includes(cy) && 
-                            l.classe.toLowerCase().includes(cl) && 
-                            l.matiere.toLowerCase().includes(ma);
+            window.publishedLessons.forEach((l, i) => {
+                const match = l.cycle.toLowerCase().includes(cy) && l.classe.toLowerCase().includes(cl) && l.matiere.toLowerCase().includes(ma);
                 rows[i].style.display = match ? '' : 'none';
             });
-        }
+        };
     </script>
 </body>
 </html>
