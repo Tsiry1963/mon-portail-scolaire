@@ -358,113 +358,536 @@
             l.sections.forEach(s => {
                 html += `<div class="mb-8"><h3 class="text-xl font-bold border-b-2 border-blue-100 pb-2 mb-4">${s.title}</h3><div class="prose max-w-none">${s.body}</div></div>`;
             });
-            document.getElementById('user-content-area').innerHTML = html;
-            toggleUserSubTab('cours');
-        };
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système Scolaire Dynamique - Cloud Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            /* Protection contre la sélection de texte */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .sidebar-link { transition: all 0.3s; border-radius: 8px; margin-bottom: 4px; }
+        .sidebar-link:hover { background-color: #e2e8f0; color: #1e3a8a; cursor: pointer; transform: translateX(5px); }
+        .hidden { display: none !important; }
+        .ck-editor__editable { min-height: 200px; border-radius: 0 0 8px 8px !important; }
+        
+        .exercice-block { background: #f0f9ff; border-left: 5px solid #3b82f6; padding: 20px; border-radius: 4px 12px 12px 4px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .nb-block { background: #fffbeb; border-left: 5px solid #f59e0b; padding: 15px; margin: 20px 0; font-style: italic; border-radius: 4px; }
+        
+        .h1-style { font-size: 1.8rem; font-weight: 700; color: #1e3a8a; margin-top: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        .h2-style { font-size: 1.4rem; font-weight: 600; color: #2563eb; margin-top: 1.5rem; }
+        .h3-style { font-size: 1.1rem; font-weight: 600; color: #64748b; margin-top: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .tab-active { border-bottom: 3px solid #ef4444; color: #ef4444; font-weight: bold; }
+        
+        /* Design de la Fiche de Préparation */
+        .fiche-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; background: white; }
+        .fiche-table th, .fiche-table td { border: 1px solid #000; padding: 8px; vertical-align: top; }
+        .fiche-header { background-color: #f8fafc; font-weight: bold; }
+        
+        @media print {
+            .no-print { display: none; }
+            body { -webkit-user-select: auto; user-select: auto; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
 
-        window.toggleUserSubTab = (mode) => {
-            const btnCours = document.getElementById('btn-view-cours');
-            const btnFiche = document.getElementById('btn-view-fiche');
-            
-            if(mode === 'cours') {
-                btnCours.className = "py-4 px-2 tab-nav-active";
-                btnFiche.className = "py-4 px-2 text-gray-400";
-                if(window.currentLessonKey) viewLesson(window.currentLessonKey);
-            } else {
-                if(window.currentUser.type !== 'Enseignant') {
-                    alert("Accès réservé aux enseignants.");
-                    return;
-                }
-                btnFiche.className = "py-4 px-2 tab-nav-active";
-                btnCours.className = "py-4 px-2 text-gray-400";
-                showFicheAuth();
-            }
-        };
+    <nav class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-white p-2 rounded-lg">
+                    <i class="fas fa-graduation-cap text-blue-900 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight">EDU-PORTAL</h1>
+                    <span class="text-[10px] opacity-75">By Fanera Christian</span>
+                </div>
+            </div>
+            <div id="nav-links" class="flex gap-2 md:gap-4">
+                <button onclick="showSection('student-login')" class="hover:bg-blue-800 px-3 py-2 rounded-lg transition text-sm"><i class="fas fa-home mr-1"></i>Accueil</button>
+                <button id="btn-fiche-nav" onclick="showSection('fiche-view')" class="hidden hover:bg-blue-800 px-3 py-2 rounded-lg transition text-sm"><i class="fas fa-file-invoice mr-1"></i>Fiches de Prep</button>
+                <button onclick="showSection('login-admin')" class="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition text-sm"><i class="fas fa-lock mr-1"></i>Admin</button>
+            </div>
+        </div>
+    </nav>
 
-        window.showFicheAuth = () => {
-            const area = document.getElementById('user-content-area');
-            area.innerHTML = `
-                <div class="max-w-md mx-auto text-center py-10">
-                    <i class="fas fa-lock text-4xl text-amber-500 mb-4"></i>
-                    <h3 class="text-xl font-bold mb-4">Autorisation requise</h3>
-                    <input type="text" id="access-code" placeholder="Entrez le code administrateur" class="w-full p-3 border rounded mb-4 text-center">
-                    <button onclick="verifyFicheCode()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold w-full">Vérifier et afficher</button>
-                </div>`;
-        };
+    <section id="student-login" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-2xl border border-gray-100">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-slate-800">Connexion</h2>
+            <p class="text-slate-500 mt-2">Accès sécurisé aux ressources</p>
+        </div>
+        <div class="space-y-4">
+            <input type="text" id="stu-id" placeholder="Identifiant" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="password" id="stu-pass" placeholder="Mot de passe" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="loginUser()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-lg transition transform active:scale-95">Se connecter</button>
+        </div>
+        <p id="stu-error" class="text-red-500 mt-4 text-sm hidden text-center font-medium">Identifiant ou mot de passe incorrect.</p>
+        
+        <div class="mt-10 pt-6 border-t text-center text-xs text-gray-400">
+            <p>Conception : <strong>TSIMANIRIMANANA Fanera Christian</strong></p>
+            <p>Master II Sciences de l'éducation</p>
+        </div>
+    </section>
 
-        window.verifyFicheCode = () => {
-            const code = document.getElementById('access-code').value;
-            const fiche = window.fiches[window.currentLessonKey];
-            if(fiche && code === fiche.code) {
-                renderFicheTable(fiche);
-            } else {
-                alert("Code incorrect ou aucune fiche pour ce chapitre.");
-            }
-        };
+    <section id="login-admin" class="hidden max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-2xl border-t-4 border-red-600">
+        <div class="text-center mb-8">
+            <i class="fas fa-shield-alt text-4xl text-red-600 mb-2"></i>
+            <h2 class="text-2xl font-bold">Administration</h2>
+        </div>
+        <input type="password" id="admin-pass" placeholder="Code d'accès" class="w-full p-3 border rounded-xl mb-4 focus:ring-2 focus:ring-red-500 outline-none">
+        <button onclick="checkAdminPass()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition">Déverrouiller</button>
+    </section>
 
-        window.renderFicheTable = (f) => {
-            const lesson = window.lessons.find(l => l.fbKey === window.currentLessonKey);
-            const html = `
-                <div class="flex justify-between items-center mb-6 no-print">
-                    <h2 class="font-bold text-xl">Fiche de préparation</h2>
-                    <button onclick="downloadPDF()" class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold">
-                        <i class="fas fa-file-pdf mr-2"></i>Télécharger PDF
+    <section id="student-view" class="hidden container mx-auto mt-6 flex flex-col md:flex-row gap-6 px-4 pb-20">
+        <aside class="md:w-1/4 bg-white p-6 rounded-2xl shadow-md h-fit md:sticky md:top-24 border border-gray-100">
+            <h3 class="font-bold text-blue-900 mb-4 flex items-center gap-2"><i class="fas fa-book"></i> Chapitres</h3>
+            <input type="text" id="user-course-search" placeholder="Rechercher..." oninput="filterUserSidebar()" class="w-full p-2 bg-gray-50 border rounded-lg text-sm mb-4">
+            <ul id="course-list-sidebar" class="space-y-1"></ul>
+        </aside>
+        <main class="md:w-3/4 bg-white p-6 md:p-10 rounded-2xl shadow-md border border-gray-100 min-h-[600px]" id="course-display">
+            <div class="flex flex-col items-center justify-center h-full text-gray-300 py-20">
+                <i class="fas fa-hand-point-left text-6xl mb-4"></i>
+                <p class="text-xl">Sélectionnez un contenu pour commencer</p>
+            </div>
+        </main>
+    </section>
+
+    <section id="fiche-view" class="hidden container mx-auto mt-6 px-4 pb-20">
+        <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800"><i class="fas fa-file-alt text-blue-600 mr-2"></i>Mes Fiches de Préparation</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="pdf-code-input" placeholder="Code PDF" class="p-2 border rounded-lg text-sm w-32">
+                    <button onclick="downloadFichePDF()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition">
+                        <i class="fas fa-download mr-2"></i>Télécharger PDF
                     </button>
                 </div>
-                <div id="fiche-to-print" class="p-4 border bg-white">
-                    <table class="fiche-table">
-                        <tr>
-                            <td colspan="2"><b>Niveau :</b> ${f.niveau}</td>
-                            <td colspan="2" class="text-center"><b>Titre de la séance :</b><br>${lesson.chapitre}</td>
-                            <td colspan="2"><b>Date :</b> ${f.date}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="3">
-                                <b>Objectif disciplinaire :</b><br>${f.objDisc}<br><br>
-                                <b>Objectif langagier :</b><br>${f.objLang}
-                            </td>
-                            <td colspan="3">
-                                <b>Connaissances et capacités :</b><br>${f.competences}
-                            </td>
-                        </tr>
-                        <tr class="fiche-header">
-                            <td>Phase</td>
-                            <td>Organisation</td>
-                            <td>Rôle Enseignant</td>
-                            <td>Tâche Élève</td>
-                            <td colspan="2">Médiation</td>
-                        </tr>
-                        <tr>
-                            <td colspan="6" class="p-0">
-                                <div class="min-h-[400px] p-2">${f.phases}</div>
-                            </td>
-                        </tr>
-                    </table>
-                    <div class="mt-4 text-[9px] text-gray-400 italic">Document généré par EDU-PORTAL - Christian Fanera</div>
-                </div>`;
-            document.getElementById('user-content-area').innerHTML = html;
+            </div>
+            <div id="fiche-content-area" class="overflow-x-auto p-4 bg-gray-50 rounded-xl">
+                <p class="text-center text-gray-500 italic">Veuillez sélectionner un chapitre dans l'onglet "Accueil" pour voir sa fiche.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="admin-panel" class="hidden container mx-auto mt-8 px-4 pb-20">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-slate-800 text-white p-6 flex justify-between items-center">
+                <h2 class="text-2xl font-bold flex items-center gap-3"><i class="fas fa-cogs text-red-500"></i> Administration</h2>
+                <button onclick="location.reload()" class="bg-red-600 px-4 py-2 rounded-lg text-sm"><i class="fas fa-power-off mr-2"></i>Quitter</button>
+            </div>
+
+            <div class="flex border-b bg-gray-50 overflow-x-auto">
+                <button onclick="switchTab('tab-create')" id="btn-tab-create" class="p-4 px-8 whitespace-nowrap tab-active">Cours</button>
+                <button onclick="switchTab('tab-fiche')" id="btn-tab-fiche" class="p-4 px-8 whitespace-nowrap">Fiche de Prep</button>
+                <button onclick="switchTab('tab-users')" id="btn-tab-users" class="p-4 px-8 whitespace-nowrap">Utilisateurs</button>
+                <button onclick="switchTab('tab-library')" id="btn-tab-library" class="p-4 px-8 whitespace-nowrap">Bibliothèque</button>
+            </div>
+
+            <div class="p-4 md:p-8">
+                <div id="tab-create" class="admin-tab">
+                    <div class="max-w-4xl mx-auto space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <select id="adm-cycle" class="p-3 border rounded-xl bg-gray-50"><option>Primaire</option><option>Collège</option><option>Lycée</option></select>
+                            <input type="text" id="adm-classe" placeholder="Classe (ex: 3ème)" class="p-3 border rounded-xl">
+                            <input type="text" id="adm-matiere" placeholder="Matière" class="p-3 border rounded-xl">
+                        </div>
+                        <input type="text" id="adm-chapitre" placeholder="Titre du Chapitre" class="w-full p-4 text-2xl font-bold border-b focus:border-blue-500 outline-none">
+                        <div id="dynamic-sections-container" class="space-y-6"></div>
+                        <div class="flex gap-4 mt-6">
+                            <button onclick="addSection()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold">+ Ajouter Bloc</button>
+                            <button onclick="publishContent()" class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold ml-auto">ENREGISTRER</button>
+                            <input type="hidden" id="edit-lesson-id">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-fiche" class="admin-tab hidden">
+                    <div class="max-w-5xl mx-auto">
+                        <div class="bg-blue-50 p-4 rounded-xl mb-6">
+                            <label class="block text-sm font-bold mb-2">Lier cette fiche au chapitre :</label>
+                            <select id="fiche-lesson-link" class="w-full p-3 border rounded-xl bg-white"></select>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="p-4 bg-white border rounded-xl">
+                                <h4 class="font-bold border-b mb-2">Entête Gauche</h4>
+                                <input type="text" id="f-niveau" placeholder="Niveau (ex: Clis)" class="w-full p-2 border mb-2">
+                                <input type="text" id="f-discipline" placeholder="Discipline" class="w-full p-2 border">
+                            </div>
+                            <div class="p-4 bg-white border rounded-xl">
+                                <h4 class="font-bold border-b mb-2">Entête Droite</h4>
+                                <input type="date" id="f-date" class="w-full p-2 border">
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <textarea id="f-objectifs" placeholder="Objectif de la séance (Disciplinaire / Langagier)" class="p-3 border rounded-xl h-24"></textarea>
+                                <textarea id="f-connaissances" placeholder="Connaissances et capacités mises en œuvre" class="p-3 border rounded-xl h-24"></textarea>
+                                <textarea id="f-competences" placeholder="Compétences du socle commun visées" class="p-3 border rounded-xl h-24"></textarea>
+                                <textarea id="f-attitudes" placeholder="Attitudes mises en œuvre" class="p-3 border rounded-xl h-24"></textarea>
+                            </div>
+                            <textarea id="f-besoins" placeholder="Besoins individuels / difficultés possibles (Bran / Groupes / Tuteur)" class="w-full p-3 border rounded-xl h-24"></textarea>
+                            <input type="text" id="f-obj-indiv" placeholder="Objectifs langagiers individuels" class="w-full p-3 border rounded-xl">
+                            <textarea id="f-materiel" placeholder="Matériel nécessaire" class="w-full p-3 border rounded-xl h-20"></textarea>
+                            
+                            <div class="bg-gray-100 p-4 rounded-xl">
+                                <h4 class="font-bold mb-2 text-center text-blue-800">DÉROULEMENT (Tableau des Phases)</h4>
+                                <textarea id="f-phases-json" placeholder="Format: Phase | Organisation | Rôle Enseignant | Tâche Elève | Médiation (Séparez les lignes par une nouvelle ligne)" class="w-full p-3 border rounded-xl h-40 font-mono text-sm"></textarea>
+                            </div>
+                        </div>
+                        <button onclick="saveFichePrep()" class="w-full mt-6 bg-blue-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-800 transition shadow-xl">
+                            <i class="fas fa-save mr-2"></i>ENREGISTRER LA FICHE DE PRÉPARATION
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tab-users" class="admin-tab hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="bg-blue-50 p-6 rounded-2xl border h-fit">
+                            <h3 class="font-bold mb-4">Nouvel Accès</h3>
+                            <div class="space-y-3">
+                                <input type="text" id="new-user-name" placeholder="Nom et Prénom" class="w-full p-3 border rounded-xl">
+                                <select id="new-user-type" class="w-full p-3 border rounded-xl">
+                                    <option value="Eleve">Élève</option>
+                                    <option value="Enseignant">Enseignant</option>
+                                </select>
+                                <input type="text" id="new-user-resp" placeholder="Classe (ex: 3ème A)" class="w-full p-3 border rounded-xl">
+                                <button onclick="addNewUser()" class="w-full bg-blue-900 text-white py-3 rounded-xl font-bold">Créer</button>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-2 overflow-x-auto rounded-xl border">
+                            <table class="w-full text-left bg-white">
+                                <thead class="bg-slate-800 text-white">
+                                    <tr>
+                                        <th class="p-4 text-sm">Nom / Rôle</th>
+                                        <th class="p-4 text-sm">ID / Pass</th>
+                                        <th class="p-4 text-sm">Classe</th>
+                                        <th class="p-4 text-sm">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-library" class="admin-tab hidden">
+                    <div class="overflow-x-auto rounded-xl border">
+                        <table class="w-full text-left bg-white">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="p-4">Détails du cours</th>
+                                    <th class="p-4 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lessons-table-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue, remove, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBexDEiFMC98r8ZqJjbfNazsKYOiXB1dck",
+            authDomain: "edu-portal-3db68.firebaseapp.com",
+            databaseURL: "https://edu-portal-3db68-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "edu-portal-3db68",
+            storageBucket: "edu-portal-3db68.firebasestorage.app",
+            messagingSenderId: "58173024956",
+            appId: "1:58173024956:web:17d27c8e7b495a48a7beb9",
+            measurementId: "G-E6XPJFT967"
         };
 
-        window.downloadPDF = () => {
-            const element = document.getElementById('fiche-to-print');
-            html2pdf().from(element).set({
-                margin: 10,
-                filename: 'Fiche_Preparation.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-            }).save();
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.editors = {};
+        window.sectionCount = 0;
+        window.users = [];
+        window.publishedLessons = [];
+        window.currentUser = null;
+        window.currentFiche = null;
+
+        // --- SYNCHRONISATION ---
+        onValue(ref(db, 'users'), (snapshot) => {
+            const data = snapshot.val();
+            window.users = data ? Object.keys(data).map(key => ({...data[key], fbKey: key})) : [];
+            renderUserTable();
+        });
+
+        onValue(ref(db, 'lessons'), (snapshot) => {
+            const data = snapshot.val();
+            window.publishedLessons = data ? Object.keys(data).map(key => ({...data[key], fbKey: key})) : [];
+            renderLessonsTable();
+            populateLessonSelect();
+            if(window.currentUser) updateStudentSidebar();
+        });
+
+        // --- NAVIGATION ---
+        window.showSection = (id) => {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        };
+
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('[id^="btn-tab-"]').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+        };
+
+        window.checkAdminPass = () => {
+            if(document.getElementById('admin-pass').value === 'Tsiry@1963!') {
+                showSection('admin-panel');
+                if(window.sectionCount === 0) addSection();
+            } else { alert("Code admin incorrect."); }
+        };
+
+        // --- GESTION UTILISATEURS ---
+        window.addNewUser = () => {
+            const name = document.getElementById('new-user-name').value;
+            const type = document.getElementById('new-user-type').value;
+            const resp = document.getElementById('new-user-resp').value;
+            if(!name || !resp) return alert("Remplissez tous les champs");
+            const id = name.toLowerCase().replace(/\s/g, '').slice(0,5) + Math.floor(10+Math.random()*89);
+            const pass = Math.random().toString(36).slice(-5).toUpperCase();
+            push(ref(db, 'users'), { name, type, resp, id, pass, active: true, pdfAccess: false });
+            document.getElementById('new-user-name').value = "";
+        };
+
+        window.deleteUser = (key) => {
+            if(confirm("Voulez-vous vraiment supprimer cet utilisateur ?")) {
+                remove(ref(db, 'users/' + key));
+            }
+        };
+
+        window.loginUser = () => {
+            const id = document.getElementById('stu-id').value;
+            const pass = document.getElementById('stu-pass').value;
+            const user = window.users.find(u => u.id === id && u.pass === pass);
+            if(user && user.active) {
+                window.currentUser = user;
+                document.getElementById('btn-fiche-nav').classList.toggle('hidden', user.type !== 'Enseignant');
+                showSection('student-view');
+                updateStudentSidebar();
+            } else {
+                document.getElementById('stu-error').classList.remove('hidden');
+            }
+        };
+
+        // --- GESTION DES COURS ---
+        window.addSection = (title = "", content = "", level = "h1") => {
+            window.sectionCount++;
+            const id = 'editor-' + window.sectionCount;
+            const container = document.getElementById('dynamic-sections-container');
+            const html = `
+                <div id="block-${window.sectionCount}" class="p-6 bg-white border rounded-2xl relative shadow-sm">
+                    <button onclick="this.parentElement.remove()" class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full">×</button>
+                    <div class="flex gap-2 mb-4">
+                        <select class="p-2 border rounded-lg text-xs font-bold w-32"><option value="h1" ${level=='h1'?'selected':''}>Titre I</option><option value="h2" ${level=='h2'?'selected':''}>Titre II</option><option value="h3" ${level=='h3'?'selected':''}>Titre III</option></select>
+                        <input type="text" value="${title}" placeholder="Titre du bloc..." class="flex-1 p-2 font-bold border-b">
+                    </div>
+                    <textarea id="${id}">${content}</textarea>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+            ClassicEditor.create(document.querySelector(`#${id}`)).then(ed => window.editors[id] = ed);
+        };
+
+        window.publishContent = () => {
+            const fbKey = document.getElementById('edit-lesson-id').value;
+            const lesson = {
+                cycle: document.getElementById('adm-cycle').value,
+                classe: document.getElementById('adm-classe').value,
+                matiere: document.getElementById('adm-matiere').value,
+                chapitre: document.getElementById('adm-chapitre').value,
+                sections: []
+            };
+            document.querySelectorAll('#dynamic-sections-container > div').forEach(div => {
+                lesson.sections.push({
+                    level: div.querySelector('select').value,
+                    title: div.querySelector('input').value,
+                    body: window.editors[div.querySelector('textarea').id].getData()
+                });
+            });
+            const lessonRef = fbKey ? ref(db, 'lessons/' + fbKey) : push(ref(db, 'lessons'));
+            set(lessonRef, lesson).then(() => { alert("Cours enregistré !"); location.reload(); });
+        };
+
+        // --- GESTION DES FICHES DE PRÉPARATION ---
+        window.populateLessonSelect = () => {
+            const sel = document.getElementById('fiche-lesson-link');
+            sel.innerHTML = '<option value="">Choisir un chapitre...</option>' + 
+                window.publishedLessons.map(l => `<option value="${l.fbKey}">${l.matiere} - ${l.chapitre} (${l.classe})</option>`).join('');
+        };
+
+        window.saveFichePrep = () => {
+            const lessonKey = document.getElementById('fiche-lesson-link').value;
+            if(!lessonKey) return alert("Sélectionnez un chapitre");
+            
+            const fiche = {
+                niveau: document.getElementById('f-niveau').value,
+                discipline: document.getElementById('f-discipline').value,
+                date: document.getElementById('f-date').value,
+                objectifs: document.getElementById('f-objectifs').value,
+                connaissances: document.getElementById('f-connaissances').value,
+                competences: document.getElementById('f-competences').value,
+                attitudes: document.getElementById('f-attitudes').value,
+                besoins: document.getElementById('f-besoins').value,
+                objIndiv: document.getElementById('f-obj-indiv').value,
+                materiel: document.getElementById('f-materiel').value,
+                phases: document.getElementById('f-phases-json').value
+            };
+            set(ref(db, 'fiches/' + lessonKey), fiche).then(() => alert("Fiche de préparation enregistrée !"));
+        };
+
+        window.viewLesson = (key) => {
+            const l = window.publishedLessons.find(x => x.fbKey === key);
+            let html = `<div class="mb-10"><h2 class="text-4xl font-extrabold text-slate-900">${l.chapitre}</h2><p class="text-blue-600">${l.matiere} | ${l.classe}</p></div>`;
+            l.sections.forEach(s => {
+                html += `<div class="mb-8"><div class="${s.level}-style">${s.title}</div><div class="mt-4 prose max-w-none">${s.body}</div></div>`;
+            });
+            document.getElementById('course-display').innerHTML = html;
+            
+            // Charger la fiche de prep en arrière-plan si enseignant
+            if(window.currentUser.type === 'Enseignant') {
+                get(ref(db, 'fiches/' + key)).then(snap => {
+                    if(snap.exists()) {
+                        window.currentFiche = snap.val();
+                        renderFicheTable(snap.val(), l.chapitre);
+                    } else {
+                        document.getElementById('fiche-content-area').innerHTML = `<p class="text-center py-10">Aucune fiche de préparation pour ce chapitre.</p>`;
+                    }
+                });
+            }
+        };
+
+        window.renderFicheTable = (f, titre) => {
+            const phasesRows = f.phases.split('\n').map(line => {
+                const cols = line.split('|');
+                return `<tr>${cols.map(c => `<td>${c.trim()}</td>`).join('')}</tr>`;
+            }).join('');
+
+            const html = `
+                <div id="fiche-printable" class="p-4 bg-white border border-black max-w-4xl mx-auto text-black">
+                    <table class="fiche-table">
+                        <tr>
+                            <td colspan="2"><strong>Niveau :</strong> ${f.niveau}</td>
+                            <td colspan="2" class="text-center font-bold text-lg">Titre de la séance : ${titre}</td>
+                            <td><strong>Date :</strong> ${f.date}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><strong>Discipline :</strong> ${f.discipline}</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </table>
+                    <table class="fiche-table">
+                        <tr class="fiche-header">
+                            <td width="50%">Objectifs de la séance :</td>
+                            <td width="50%">Connaissances et capacités mises en œuvre :</td>
+                        </tr>
+                        <tr>
+                            <td>${f.objectifs.replace(/\n/g, '<br>')}</td>
+                            <td>${f.connaissances.replace(/\n/g, '<br>')}</td>
+                        </tr>
+                        <tr class="fiche-header">
+                            <td>Compétences du socle commun :</td>
+                            <td>Attitudes mises en œuvre :</td>
+                        </tr>
+                        <tr>
+                            <td>${f.competences.replace(/\n/g, '<br>')}</td>
+                            <td>${f.attitudes.replace(/\n/g, '<br>')}</td>
+                        </tr>
+                    </table>
+                    <table class="fiche-table">
+                        <tr class="fiche-header"><td>Besoins individuels / difficultés possibles</td></tr>
+                        <tr><td>${f.besoins.replace(/\n/g, '<br>')}</td></tr>
+                    </table>
+                    <table class="fiche-table">
+                        <tr class="fiche-header"><td>Objectifs langagiers individuels</td></tr>
+                        <tr><td>${f.objIndiv}</td></tr>
+                    </table>
+                    <table class="fiche-table">
+                        <tr class="fiche-header"><td>Matériel</td></tr>
+                        <tr><td>${f.materiel}</td></tr>
+                    </table>
+                    <table class="fiche-table">
+                        <tr class="fiche-header text-center">
+                            <td>Phase</td><td>Organisation</td><td>Rôle de l'enseignant</td><td>Tâche élève</td><td>Médiation</td>
+                        </tr>
+                        ${phasesRows}
+                    </table>
+                    <div class="mt-4 text-[10px] text-right italic">Généré par EDU-PORTAL - Fanera Christian</div>
+                </div>`;
+            document.getElementById('fiche-content-area').innerHTML = html;
+        };
+
+        window.downloadFichePDF = () => {
+            const code = document.getElementById('pdf-code-input').value;
+            if(code !== "PREP2026") return alert("Code de téléchargement invalide. Contactez l'administrateur.");
+            
+            const element = document.getElementById('fiche-printable');
+            html2canvas(element).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save("fiche_preparation.pdf");
+            });
+        };
+
+        // --- AFFICHAGES TABLES ---
+        window.renderUserTable = () => {
+            document.getElementById('students-table-body').innerHTML = window.users.map(u => `
+                <tr>
+                    <td class="p-4"><strong>${u.name}</strong><br><small>${u.type}</small></td>
+                    <td class="p-4"><code class="bg-gray-100 p-1">${u.id}</code> / <code class="bg-blue-50">${u.pass}</code></td>
+                    <td class="p-4">${u.resp}</td>
+                    <td class="p-4">
+                        <button onclick="deleteUser('${u.fbKey}')" class="text-red-600 hover:text-red-900"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        };
+
+        window.renderLessonsTable = () => {
+            document.getElementById('lessons-table-body').innerHTML = window.publishedLessons.map(l => `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-4"><strong>${l.chapitre}</strong><br><small>${l.cycle} - ${l.classe} - ${l.matiere}</small></td>
+                    <td class="p-4 text-center">
+                        <button onclick="remove(ref(db, 'lessons/${l.fbKey}'))" class="text-red-600 p-2"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        };
+
+        window.updateStudentSidebar = () => {
+            const list = document.getElementById('course-list-sidebar');
+            list.innerHTML = window.publishedLessons
+                .filter(l => l.classe.toLowerCase().includes(window.currentUser.resp.toLowerCase()))
+                .map(l => `<li onclick="viewLesson('${l.fbKey}')" class="p-3 sidebar-link bg-slate-50 border-l-4 border-blue-900 font-bold">${l.chapitre}</li>`).join('');
         };
 
     </script>
-
-    <footer class="mt-20 p-10 bg-slate-900 text-white text-center">
-        <div class="max-w-2xl mx-auto opacity-70">
-            <p class="font-bold">TSIMANIRIMANANA Fanera Christian</p>
-            <p class="text-sm">Créateur de contenu - Études en Sciences de l'éducation (Master II)</p>
-            <p class="text-xs mt-2">Contact : tsiryfanera@gmail.com | 0336485137</p>
-        </div>
-    </footer>
-
 </body>
 </html>
