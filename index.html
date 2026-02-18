@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système Scolaire Dynamique - Local Storage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar-link { transition: all 0.3s; border-radius: 8px; margin-bottom: 4px; }
+        .sidebar-link:hover { background-color: #e2e8f0; color: #1e3a8a; cursor: pointer; transform: translateX(5px); }
+        .hidden { display: none; }
+        .ck-editor__editable { min-height: 250px; border-radius: 0 0 8px 8px !important; }
+        
+        /* Blocs de contenu */
+        .exercice-block { background: #f0f9ff; border-left: 5px solid #3b82f6; padding: 20px; border-radius: 4px 12px 12px 4px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .nb-block { background: #fffbeb; border-left: 5px solid #f59e0b; padding: 15px; margin: 20px 0; font-style: italic; border-radius: 4px; }
+        
+        /* Hiérarchie visuelle cours */
+        .h1-style { font-size: 1.8rem; font-weight: 700; color: #1e3a8a; margin-top: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        .h2-style { font-size: 1.4rem; font-weight: 600; color: #2563eb; margin-top: 1.5rem; }
+        .h3-style { font-size: 1.1rem; font-weight: 600; color: #64748b; margin-top: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* Onglets Admin */
+        .tab-active { border-bottom: 3px solid #ef4444; color: #ef4444; font-weight: bold; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen" onload="initApp()">
+
+    <nav class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-white p-2 rounded-lg">
+                    <i class="fas fa-graduation-cap text-blue-900 text-xl"></i>
+                </div>
+                <h1 class="text-xl font-extrabold tracking-tight">EDU-PORTAL</h1>
+            </div>
+            <div id="nav-links" class="flex gap-4">
+                <button onclick="showSection('student-login')" class="hover:bg-blue-800 px-4 py-2 rounded-lg transition"><i class="fas fa-user-graduate mr-2"></i>Espace Apprenant</button>
+                <button onclick="showSection('login-admin')" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition"><i class="fas fa-lock mr-2"></i>Admin</button>
+            </div>
+        </div>
+    </nav>
+
+    <section id="student-login" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-2xl border border-gray-100">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-slate-800">Bienvenue</h2>
+            <p class="text-slate-500 mt-2">Accédez à vos ressources pédagogiques</p>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Identifiant</label>
+                <input type="text" id="stu-id" placeholder="Ex: jean23" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Mot de passe</label>
+                <input type="password" id="stu-pass" placeholder="••••••••" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
+            </div>
+            <button onclick="loginUser()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition transform active:scale-95">Se connecter</button>
+        </div>
+        <p id="stu-error" class="text-red-500 mt-4 text-sm hidden text-center font-medium">Identifiant ou mot de passe incorrect.</p>
+    </section>
+
+    <section id="login-admin" class="hidden max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-2xl border-t-4 border-red-600">
+        <div class="text-center mb-8">
+            <i class="fas fa-shield-alt text-4xl text-red-600 mb-2"></i>
+            <h2 class="text-2xl font-bold">Administration Système</h2>
+        </div>
+        <input type="password" id="admin-pass" placeholder="Code d'accès" class="w-full p-3 border rounded-xl mb-4 focus:ring-2 focus:ring-red-500 outline-none">
+        <button onclick="checkAdminPass()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition">Déverrouiller la console</button>
+    </section>
+
+    <section id="student-view" class="hidden container mx-auto mt-6 flex flex-col md:flex-row gap-6 px-4 pb-20">
+        <aside class="md:w-1/4 bg-white p-6 rounded-2xl shadow-md h-[calc(100vh-120px)] sticky top-24 overflow-y-auto border border-gray-100">
+            <div class="flex items-center gap-2 mb-6 text-blue-900">
+                <i class="fas fa-book-open"></i>
+                <h3 class="font-bold uppercase tracking-wider text-sm">Mon Programme</h3>
+            </div>
+            <div class="relative mb-6">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
+                <input type="text" id="user-course-search" placeholder="Rechercher un chapitre..." oninput="filterUserSidebar()" class="w-full pl-9 pr-3 py-2 bg-gray-50 border rounded-lg text-sm focus:bg-white transition">
+            </div>
+            <ul id="course-list-sidebar" class="space-y-1"></ul>
+        </aside>
+        
+        <main class="md:w-3/4 bg-white p-10 rounded-2xl shadow-md border border-gray-100 min-h-[800px]" id="course-display">
+            <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                <i class="fas fa-arrow-left text-5xl mb-4"></i>
+                <p class="text-xl">Sélectionnez un cours dans le menu de gauche</p>
+            </div>
+        </main>
+    </section>
+
+    <section id="admin-panel" class="hidden container mx-auto mt-8 px-4 pb-20">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-slate-800 text-white p-6 flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-3">
+                        <i class="fas fa-cogs text-red-500"></i> Console d'Administration
+                    </h2>
+                </div>
+                <button onclick="location.reload()" class="bg-white/10 hover:bg-red-500 px-4 py-2 rounded-lg transition text-sm">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Déconnexion
+                </button>
+            </div>
+
+            <div class="flex border-b bg-gray-50">
+                <button onclick="switchTab('tab-create')" id="btn-tab-create" class="p-4 px-8 hover:bg-white transition tab-active">
+                    <i class="fas fa-plus-circle mr-2"></i>Création de contenu
+                </button>
+                <button onclick="switchTab('tab-users')" id="btn-tab-users" class="p-4 px-8 hover:bg-white transition">
+                    <i class="fas fa-users mr-2"></i>Utilisateurs
+                </button>
+                <button onclick="switchTab('tab-library')" id="btn-tab-library" class="p-4 px-8 hover:bg-white transition">
+                    <i class="fas fa-archive mr-2"></i>Bibliothèque
+                </button>
+            </div>
+
+            <div class="p-8">
+                <div id="tab-create" class="admin-tab">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Cycle</label>
+                                <select id="adm-cycle" class="w-full p-3 border rounded-xl bg-gray-50">
+                                    <option value="Primaire">Primaire</option>
+                                    <option value="Collège">Collège</option>
+                                    <option value="Lycée">Lycée</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Classe</label>
+                                <input type="text" id="adm-classe" placeholder="Ex: 3ème A" class="w-full p-3 border rounded-xl bg-gray-50">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Matière</label>
+                                <input type="text" id="adm-matiere" placeholder="Ex: Mathématiques" class="w-full p-3 border rounded-xl bg-gray-50">
+                            </div>
+                        </div>
+                        
+                        <input type="text" id="adm-chapitre" placeholder="Titre principal du Chapitre..." class="w-full p-4 text-3xl font-bold border-b-2 mb-8 focus:border-blue-500 outline-none transition">
+                        
+                        <div id="dynamic-sections-container" class="space-y-8"></div>
+
+                        <div class="mt-10 flex flex-wrap gap-4 p-6 bg-slate-50 rounded-2xl border-2 border-dashed">
+                            <button onclick="addSection()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-md transition">
+                                <i class="fas fa-layer-group mr-2"></i>Ajouter un bloc de contenu
+                            </button>
+                            <button onclick="publishContent()" id="btn-publish" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold shadow-md ml-auto transition">
+                                <i class="fas fa-cloud-upload-alt mr-2"></i>ENREGISTRER LE COURS
+                            </button>
+                            <button onclick="resetCourseForm()" id="btn-cancel-edit" class="hidden bg-gray-500 text-white px-6 py-3 rounded-xl transition">Annuler</button>
+                            <input type="hidden" id="edit-lesson-id">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-users" class="admin-tab hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 h-fit">
+                            <h3 class="font-bold text-lg mb-4 text-blue-900"><i class="fas fa-user-plus mr-2"></i>Nouvel Accès</h3>
+                            <div class="space-y-4">
+                                <input type="text" id="new-user-name" placeholder="Nom et Prénom" class="w-full p-3 border rounded-xl bg-white">
+                                <select id="new-user-type" class="w-full p-3 border rounded-xl bg-white">
+                                    <option value="Eleve">Élève</option>
+                                    <option value="Enseignant">Enseignant</option>
+                                </select>
+                                <input type="text" id="new-user-resp" placeholder="Classe ou Matière" class="w-full p-3 border rounded-xl bg-white">
+                                <button onclick="addNewUser()" class="w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition">Créer le compte</button>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-2 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                            <table class="w-full text-left border-collapse bg-white">
+                                <thead class="bg-slate-800 text-white">
+                                    <tr>
+                                        <th class="p-4 text-sm font-semibold">Identité</th>
+                                        <th class="p-4 text-sm font-semibold">Accès (ID/Pass)</th>
+                                        <th class="p-4 text-sm font-semibold">Rôle / Affectation</th>
+                                        <th class="p-4 text-sm font-semibold">Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-library" class="admin-tab hidden">
+                    <div class="bg-gray-50 p-4 rounded-xl mb-6 flex gap-4">
+                        <input type="text" id="filter-cycle" placeholder="🔍 Cycle" oninput="filterLessons()" class="p-2 border rounded-lg flex-1">
+                        <input type="text" id="filter-classe" placeholder="🔍 Classe" oninput="filterLessons()" class="p-2 border rounded-lg flex-1">
+                        <input type="text" id="filter-matiere" placeholder="🔍 Matière" oninput="filterLessons()" class="p-2 border rounded-lg flex-1">
+                    </div>
+                    <div class="overflow-hidden rounded-xl border border-gray-200">
+                        <table class="w-full text-left bg-white">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="p-4 border-b font-bold">Détails du cours</th>
+                                    <th class="p-4 border-b font-bold text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lessons-table-body" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        let editors = {};
+        let sectionCount = 0;
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let publishedLessons = JSON.parse(localStorage.getItem('lessons')) || [];
+        let currentUser = null;
+
+        function initApp() {
+            renderUserTable();
+            renderLessonsTable();
+        }
+
+        function showSection(id) {
+            ['student-login', 'login-admin', 'student-view', 'admin-panel'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('[id^="btn-tab-"]').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+        }
+
+        function checkAdminPass() {
+            if(document.getElementById('admin-pass').value === 'Tsiry@1963!') {
+                showSection('admin-panel');
+                if(sectionCount === 0) addSection();
+            }
+        }
+
+        function addSection(title = "", content = "", level = "h1") {
+            sectionCount++;
+            const id = 'editor-' + sectionCount;
+            const container = document.getElementById('dynamic-sections-container');
+            const html = `
+                <div id="block-${sectionCount}" class="p-6 bg-white border border-gray-200 rounded-2xl relative shadow-sm hover:shadow-md transition">
+                    <button onclick="this.parentElement.remove()" class="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full shadow-lg hover:scale-110 transition">×</button>
+                    <div class="flex flex-col md:flex-row gap-4 mb-4">
+                        <select class="p-2 border rounded-lg text-sm font-bold bg-blue-50 text-blue-900 outline-none w-full md:w-40">
+                            <option value="h1" ${level=='h1'?'selected':''}>Titre (Principal)</option>
+                            <option value="h2" ${level=='h2'?'selected':''}>Sous-titre (II)</option>
+                            <option value="h3" ${level=='h3'?'selected':''}>Petit Titre (A)</option>
+                        </select>
+                        <input type="text" value="${title}" placeholder="Entrez le titre du bloc..." class="flex-1 p-2 font-bold border-b-2 focus:border-blue-400 outline-none">
+                    </div>
+                    <textarea id="${id}">${content}</textarea>
+                    <div class="mt-4 flex gap-3">
+                        <span class="text-xs font-bold text-gray-400 uppercase self-center mr-2">Outils rapides :</span>
+                        <button onclick="insertBlock(${sectionCount}, 'nb')" class="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-200 transition">📝 Insérer NB</button>
+                        <button onclick="insertBlock(${sectionCount}, 'exo')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-200 transition">✍️ Insérer Exercice</button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+            ClassicEditor.create(document.querySelector(`#${id}`)).then(ed => editors[id] = ed);
+        }
+
+        function insertBlock(num, type) {
+            const editor = editors['editor-' + num];
+            const content = type === 'nb' 
+                ? '<div class="nb-block"><strong>NB :</strong> Saisir ici votre remarque...</div>' 
+                : '<div class="exercice-block"><strong>EXERCICE :</strong><br>Saisir l\'énoncé ici...</div>';
+            editor.model.insertContent(editor.data.toModel(editor.data.processor.toView(content)));
+        }
+
+        function publishContent() {
+            const editId = document.getElementById('edit-lesson-id').value;
+            const lesson = {
+                id: editId ? parseInt(editId) : Date.now(),
+                cycle: document.getElementById('adm-cycle').value,
+                classe: document.getElementById('adm-classe').value,
+                matiere: document.getElementById('adm-matiere').value,
+                chapitre: document.getElementById('adm-chapitre').value,
+                sections: []
+            };
+
+            const blocks = document.querySelectorAll('#dynamic-sections-container > div');
+            if(blocks.length === 0 || !lesson.chapitre) {
+                alert("Veuillez remplir au moins le titre et un bloc de contenu.");
+                return;
+            }
+
+            blocks.forEach(div => {
+                const level = div.querySelector('select').value;
+                const title = div.querySelector('input').value;
+                const body = editors[div.querySelector('textarea').id].getData();
+                lesson.sections.push({ level, title, body });
+            });
+
+            if(editId) {
+                publishedLessons = publishedLessons.map(l => l.id == editId ? lesson : l);
+            } else {
+                publishedLessons.push(lesson);
+            }
+
+            localStorage.setItem('lessons', JSON.stringify(publishedLessons));
+            alert("✅ Le cours a été sauvegardé avec succès !");
+            resetCourseForm();
+            renderLessonsTable();
+            switchTab('tab-library');
+        }
+
+        
+        function resetCourseForm() {
+            document.getElementById('adm-classe').value = "";
+            document.getElementById('adm-matiere').value = "";
+            document.getElementById('adm-chapitre').value = "";
+            document.getElementById('edit-lesson-id').value = "";
+            document.getElementById('dynamic-sections-container').innerHTML = "";
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            sectionCount = 0; editors = {};
+            addSection();
+        }
+
+        function addNewUser() {
+            const name = document.getElementById('new-user-name').value;
+            const type = document.getElementById('new-user-type').value;
+            const resp = document.getElementById('new-user-resp').value;
+            if(!name || !resp) return alert("Remplissez tous les champs");
+
+            const id = name.toLowerCase().replace(/\s/g, '').slice(0, 5) + Math.floor(10 + Math.random()*89);
+            const pass = Math.random().toString(36).slice(-5).toUpperCase();
+
+            users.push({ name, type, resp, id, pass, active: true });
+            localStorage.setItem('users', JSON.stringify(users));
+            renderUserTable();
+            document.getElementById('new-user-name').value = "";
+            document.getElementById('new-user-resp').value = "";
+        }
+
+        function loginUser() {
+            const id = document.getElementById('stu-id').value;
+            const pass = document.getElementById('stu-pass').value;
+            const user = users.find(u => u.id === id && u.pass === pass);
+
+            if(user && user.active) {
+                currentUser = user;
+                showSection('student-view');
+                updateStudentSidebar();
+            } else {
+                document.getElementById('stu-error').classList.remove('hidden');
+            }
+        }
+
+        function updateStudentSidebar() {
+            const list = document.getElementById('course-list-sidebar');
+            const search = document.getElementById('user-course-search').value.toLowerCase();
+            list.innerHTML = "";
+            
+            let myLessons = publishedLessons.filter(l => {
+                if(currentUser.type === "Eleve") return l.classe.toLowerCase() === currentUser.resp.toLowerCase();
+                if(currentUser.type === "Enseignant") return l.matiere.toLowerCase() === currentUser.resp.toLowerCase();
+                return false;
+            });
+
+            myLessons.forEach(l => {
+                const matchTitle = l.sections.some(s => s.title.toLowerCase().includes(search));
+                if(l.chapitre.toLowerCase().includes(search) || matchTitle) {
+                    list.innerHTML += `
+                    <li onclick="viewLesson(${l.id})" class="p-3 sidebar-link bg-slate-50 border-l-4 border-transparent hover:border-blue-900 group">
+                        <div class="text-xs text-gray-400 font-bold">${l.matiere.toUpperCase()}</div>
+                        <div class="text-sm font-semibold text-slate-700 group-hover:text-blue-900">${l.chapitre}</div>
+                    </li>`;
+                }
+            });
+        }
+
+        function filterUserSidebar() { updateStudentSidebar(); }
+
+        function viewLesson(id) {
+            const l = publishedLessons.find(lesson => lesson.id == id);
+            let h1=0, h2=0, h3=0;
+            let html = `
+                <div class="mb-10">
+                    <nav class="flex gap-2 text-xs font-bold text-blue-600 mb-4 bg-blue-50 w-fit px-3 py-1 rounded-full uppercase tracking-widest">
+                        <span>${l.cycle}</span> • <span>${l.classe}</span> • <span>${l.matiere}</span>
+                    </nav>
+                    <h2 class="text-4xl font-extrabold text-slate-900 leading-tight">${l.chapitre}</h2>
+                </div>`;
+            
+            l.sections.forEach(s => {
+                let num = "";
+                if(s.level === 'h1') { h1++; h2=0; h3=0; num = `<span class="bg-blue-900 text-white px-3 py-1 rounded-lg mr-3">${h1}</span>`; }
+                else if(s.level === 'h2') { h2++; h3=0; num = `<span class="text-blue-600 mr-2">${h1}.${h2}</span>`; }
+                else { h3++; num = `<span class="text-gray-400 mr-2">${h1}.${h2}.${h3}</span>`; }
+                
+                html += `
+                <div class="mb-8 animate-in fade-in duration-500">
+                    <div class="${s.level}-style flex items-center">${num}${s.title}</div>
+                    <div class="mt-4 pl-0 md:pl-10 text-lg leading-relaxed text-slate-700 prose prose-slate max-w-none">${s.body}</div>
+                </div>`;
+            });
+            document.getElementById('course-display').innerHTML = html;
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function renderUserTable() {
+            const tbody = document.getElementById('students-table-body');
+            tbody.innerHTML = "";
+            users.forEach((u, i) => {
+                tbody.innerHTML += `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="p-4">
+                        <div class="font-bold text-slate-800">${u.name}</div>
+                        <div class="text-xs text-slate-400 uppercase tracking-tighter">${u.type}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                           <span class="bg-gray-100 px-2 py-1 rounded font-mono text-xs font-bold">${u.id}</span>
+                           <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded font-mono text-xs font-bold">${u.pass}</span>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <span class="text-sm font-medium text-slate-600">${u.resp}</span>
+                    </td>
+                    <td class="p-4">
+                        <button onclick="toggleUser(${i})" class="${u.active?'bg-green-100 text-green-700':'bg-red-100 text-red-700'} px-3 py-1 rounded-full text-xs font-bold transition">
+                            ${u.active ? '<i class="fas fa-check-circle mr-1"></i>Actif' : '<i class="fas fa-ban mr-1"></i>Bloqué'}
+                        </button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        function toggleUser(i) {
+            users[i].active = !users[i].active;
+            localStorage.setItem('users', JSON.stringify(users));
+            renderUserTable();
+        }
+
+        function renderLessonsTable() {
+            const tbody = document.getElementById('lessons-table-body');
+            tbody.innerHTML = "";
+            publishedLessons.forEach(l => {
+                tbody.innerHTML += `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-4">
+                        <div class="text-xs font-bold text-gray-400 uppercase">${l.cycle} | ${l.classe} | ${l.matiere}</div>
+                        <div class="text-lg font-bold text-slate-800">${l.chapitre}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="flex justify-center gap-2">
+                            <button onclick="editLesson(${l.id})" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteLesson(${l.id})" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        function editLesson(id) {
+            const l = publishedLessons.find(lesson => lesson.id == id);
+            document.getElementById('edit-lesson-id').value = l.id;
+            document.getElementById('adm-cycle').value = l.cycle;
+            document.getElementById('adm-classe').value = l.classe;
+            document.getElementById('adm-matiere').value = l.matiere;
+            document.getElementById('adm-chapitre').value = l.chapitre;
+            document.getElementById('dynamic-sections-container').innerHTML = "";
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            sectionCount = 0; editors = {};
+            l.sections.forEach(s => addSection(s.title, s.body, s.level));
+            switchTab('tab-create');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function deleteLesson(id) {
+            if(confirm("❗ Êtes-vous sûr de vouloir supprimer définitivement ce cours ?")) {
+                publishedLessons = publishedLessons.filter(l => l.id != id);
+                localStorage.setItem('lessons', JSON.stringify(publishedLessons));
+                renderLessonsTable();
+            }
+        }
+
+        function filterLessons() {
+            const cy = document.getElementById('filter-cycle').value.toLowerCase();
+            const cl = document.getElementById('filter-classe').value.toLowerCase();
+            const ma = document.getElementById('filter-matiere').value.toLowerCase();
+            
+            const rows = document.querySelectorAll('#lessons-table-body tr');
+            publishedLessons.forEach((l, i) => {
+                const match = l.cycle.toLowerCase().includes(cy) && 
+                            l.classe.toLowerCase().includes(cl) && 
+                            l.matiere.toLowerCase().includes(ma);
+                rows[i].style.display = match ? '' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
