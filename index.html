@@ -6,31 +6,35 @@
     <title>Système Scolaire Dynamique - Cloud Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         
-        body { font-family: 'Inter', sans-serif; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; 
+        }
+        
         .sidebar-link { transition: all 0.3s; border-radius: 8px; margin-bottom: 4px; }
         .sidebar-link:hover { background-color: #e2e8f0; color: #1e3a8a; cursor: pointer; transform: translateX(5px); }
         .hidden { display: none !important; }
-        .ck-editor__editable { min-height: 250px; border-radius: 0 0 8px 8px !important; }
+        .ck-editor__editable { min-height: 150px; }
         
-        /* Blocs de contenu */
-        .exercice-block { background: #f0f9ff; border-left: 5px solid #3b82f6; padding: 20px; border-radius: 4px 12px 12px 4px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .nb-block { background: #fffbeb; border-left: 5px solid #f59e0b; padding: 15px; margin: 20px 0; font-style: italic; border-radius: 4px; }
+        /* Styles Fiche de Préparation */
+        .fiche-table { width: 100%; border-collapse: collapse; background: white; font-size: 12px; }
+        .fiche-table th, .fiche-table td { border: 1px solid #333; padding: 8px; vertical-align: top; }
+        .fiche-header { background: #f8fafc; font-weight: bold; text-align: center; }
         
-        /* Hiérarchie visuelle cours */
-        .h1-style { font-size: 1.8rem; font-weight: 700; color: #1e3a8a; margin-top: 2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
-        .h2-style { font-size: 1.4rem; font-weight: 600; color: #2563eb; margin-top: 1.5rem; }
-        .h3-style { font-size: 1.1rem; font-weight: 600; color: #64748b; margin-top: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .tab-nav-active { border-bottom: 3px solid #3b82f6; color: #1e3a8a; font-weight: 700; }
         
-        /* Onglets Admin */
-        .tab-active { border-bottom: 3px solid #ef4444; color: #ef4444; font-weight: bold; }
-        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        @media print {
+            .no-print { display: none; }
+            body { -webkit-user-select: auto; user-select: auto; }
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen">
+<body class="bg-slate-100 text-slate-800 min-h-screen" oncontextmenu="return false;">
 
     <nav class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-4 sticky top-0 z-50 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
@@ -38,174 +42,145 @@
                 <div class="bg-white p-2 rounded-lg">
                     <i class="fas fa-graduation-cap text-blue-900 text-xl"></i>
                 </div>
-                <h1 class="text-xl font-extrabold tracking-tight">EDU-PORTAL</h1>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight">EDU-PORTAL</h1>
+                    <p class="text-[10px] text-blue-200">By T. Fanera Christian</p>
+                </div>
             </div>
-            <div id="nav-links" class="flex gap-4">
-                <button onclick="showSection('student-login')" class="hover:bg-blue-800 px-4 py-2 rounded-lg transition"><i class="fas fa-user-graduate mr-2"></i>Espace Apprenant</button>
-                <button onclick="showSection('login-admin')" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition"><i class="fas fa-lock mr-2"></i>Admin</button>
+            <div id="nav-links" class="flex gap-2 md:gap-4">
+                <button onclick="showSection('student-login')" class="text-sm hover:bg-blue-800 px-3 py-2 rounded-lg transition">Connexion</button>
+                <button onclick="showSection('login-admin')" class="text-sm bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition">Admin</button>
             </div>
         </div>
     </nav>
 
     <section id="student-login" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-2xl border border-gray-100">
         <div class="text-center mb-8">
-            <h2 class="text-3xl font-bold text-slate-800">Bienvenue</h2>
-            <p class="text-slate-500 mt-2">Accédez à vos ressources pédagogiques</p>
+            <h2 class="text-3xl font-bold text-slate-800">Espace Utilisateur</h2>
+            <p class="text-slate-500 mt-2">Élèves et Enseignants</p>
         </div>
         <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Identifiant</label>
-                <input type="text" id="stu-id" placeholder="Ex: jean23" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Mot de passe</label>
-                <input type="password" id="stu-pass" placeholder="••••••••" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
-            </div>
-            <button onclick="loginUser()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition transform active:scale-95">Se connecter</button>
+            <input type="text" id="stu-id" placeholder="Identifiant" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="password" id="stu-pass" placeholder="Mot de passe" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            <button onclick="loginUser()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition">Se connecter</button>
         </div>
-        <p id="stu-error" class="text-red-500 mt-4 text-sm hidden text-center font-medium">Identifiant ou mot de passe incorrect.</p>
+        <p id="stu-error" class="text-red-500 mt-4 text-sm hidden text-center">Identifiant ou mot de passe incorrect.</p>
     </section>
 
     <section id="login-admin" class="hidden max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-2xl border-t-4 border-red-600">
         <div class="text-center mb-8">
             <i class="fas fa-shield-alt text-4xl text-red-600 mb-2"></i>
-            <h2 class="text-2xl font-bold">Administration Système</h2>
+            <h2 class="text-2xl font-bold">Administration</h2>
         </div>
-        <input type="password" id="admin-pass" placeholder="Code d'accès" class="w-full p-3 border rounded-xl mb-4 focus:ring-2 focus:ring-red-500 outline-none">
-        <button onclick="checkAdminPass()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition">Déverrouiller la console</button>
+        <input type="password" id="admin-pass" placeholder="Code secret" class="w-full p-3 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-red-500">
+        <button onclick="checkAdminPass()" class="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition">Accéder</button>
     </section>
 
-    <section id="student-view" class="hidden container mx-auto mt-6 flex flex-col md:flex-row gap-6 px-4 pb-20">
-        <aside class="md:w-1/4 bg-white p-6 rounded-2xl shadow-md h-[calc(100vh-120px)] sticky top-24 overflow-y-auto border border-gray-100">
-            <div class="flex items-center gap-2 mb-6 text-blue-900">
-                <i class="fas fa-book-open"></i>
-                <h3 class="font-bold uppercase tracking-wider text-sm">Mon Programme</h3>
+    <section id="student-view" class="hidden min-h-screen">
+        <div class="bg-white border-b shadow-sm sticky top-16 z-40">
+            <div class="container mx-auto flex gap-6 px-4">
+                <button id="btn-view-cours" onclick="toggleUserSubTab('cours')" class="py-4 px-2 tab-nav-active">Cours</button>
+                <button id="btn-view-fiche" onclick="toggleUserSubTab('fiche')" class="py-4 px-2 text-gray-500">Fiche de préparation</button>
             </div>
-            <div class="relative mb-6">
-                <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
-                <input type="text" id="user-course-search" placeholder="Rechercher un chapitre..." oninput="filterUserSidebar()" class="w-full pl-9 pr-3 py-2 bg-gray-50 border rounded-lg text-sm focus:bg-white transition">
-            </div>
-            <ul id="course-list-sidebar" class="space-y-1"></ul>
-        </aside>
-        
-        <main class="md:w-3/4 bg-white p-10 rounded-2xl shadow-md border border-gray-100 min-h-[800px]" id="course-display">
-            <div class="flex flex-col items-center justify-center h-full text-gray-400">
-                <i class="fas fa-arrow-left text-5xl mb-4"></i>
-                <p class="text-xl">Sélectionnez un cours dans le menu de gauche</p>
-            </div>
-        </main>
+        </div>
+
+        <div class="container mx-auto mt-6 flex flex-col md:flex-row gap-6 px-4">
+            <aside class="md:w-1/4 bg-white p-6 rounded-2xl shadow-md h-fit md:sticky md:top-36 border border-gray-100">
+                <h3 class="font-bold text-sm uppercase mb-4 text-blue-900">Chapitres</h3>
+                <ul id="course-list-sidebar" class="space-y-1"></ul>
+            </aside>
+            
+            <main class="md:w-3/4 bg-white p-6 md:p-10 rounded-2xl shadow-md border border-gray-100 mb-10">
+                <div id="user-content-area">
+                    <div class="text-center text-gray-400 py-20">
+                        <i class="fas fa-book-open text-5xl mb-4"></i>
+                        <p>Sélectionnez un chapitre pour commencer</p>
+                    </div>
+                </div>
+            </main>
+        </div>
     </section>
 
     <section id="admin-panel" class="hidden container mx-auto mt-8 px-4 pb-20">
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="bg-slate-800 text-white p-6 flex justify-between items-center">
-                <div>
-                    <h2 class="text-2xl font-bold flex items-center gap-3">
-                        <i class="fas fa-cogs text-red-500"></i> Console d'Administration
-                    </h2>
-                </div>
-                <button onclick="location.reload()" class="bg-white/10 hover:bg-red-500 px-4 py-2 rounded-lg transition text-sm">
-                    <i class="fas fa-sign-out-alt mr-2"></i>Déconnexion
-                </button>
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+            <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+                <h2 class="font-bold flex items-center gap-2"><i class="fas fa-tools"></i> Console de gestion</h2>
+                <button onclick="location.reload()" class="text-xs bg-red-500 px-3 py-1 rounded">Quitter</button>
             </div>
 
-            <div class="flex border-b bg-gray-50">
-                <button onclick="switchTab('tab-create')" id="btn-tab-create" class="p-4 px-8 hover:bg-white transition tab-active">
-                    <i class="fas fa-plus-circle mr-2"></i>Création de contenu
-                </button>
-                <button onclick="switchTab('tab-users')" id="btn-tab-users" class="p-4 px-8 hover:bg-white transition">
-                    <i class="fas fa-users mr-2"></i>Utilisateurs
-                </button>
-                <button onclick="switchTab('tab-library')" id="btn-tab-library" class="p-4 px-8 hover:bg-white transition">
-                    <i class="fas fa-archive mr-2"></i>Bibliothèque
-                </button>
+            <div class="flex border-b overflow-x-auto bg-gray-50">
+                <button onclick="switchTab('tab-create')" id="btn-tab-create" class="p-4 whitespace-nowrap tab-active border-b-2 border-red-500 font-bold">Création de Cours</button>
+                <button onclick="switchTab('tab-fiche')" id="btn-tab-fiche" class="p-4 whitespace-nowrap">Fiches de Préparation</button>
+                <button onclick="switchTab('tab-users')" id="btn-tab-users" class="p-4 whitespace-nowrap">Utilisateurs</button>
             </div>
 
-            <div class="p-8">
+            <div class="p-6">
                 <div id="tab-create" class="admin-tab">
-                    <div class="max-w-4xl mx-auto">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold text-gray-500 uppercase">Cycle</label>
-                                <select id="adm-cycle" class="w-full p-3 border rounded-xl bg-gray-50">
-                                    <option value="Primaire">Primaire</option>
-                                    <option value="Collège">Collège</option>
-                                    <option value="Lycée">Lycée</option>
-                                </select>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold text-gray-500 uppercase">Classe</label>
-                                <input type="text" id="adm-classe" placeholder="Ex: 3ème A" class="w-full p-3 border rounded-xl bg-gray-50">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-xs font-bold text-gray-500 uppercase">Matière</label>
-                                <input type="text" id="adm-matiere" placeholder="Ex: Mathématiques" class="w-full p-3 border rounded-xl bg-gray-50">
-                            </div>
-                        </div>
-                        
-                        <input type="text" id="adm-chapitre" placeholder="Titre principal du Chapitre..." class="w-full p-4 text-3xl font-bold border-b-2 mb-8 focus:border-blue-500 outline-none transition">
-                        
-                        <div id="dynamic-sections-container" class="space-y-8"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <input type="text" id="adm-classe" placeholder="Classe (Ex: 3ème)" class="p-2 border rounded">
+                        <input type="text" id="adm-matiere" placeholder="Matière" class="p-2 border rounded">
+                        <input type="text" id="adm-chapitre" placeholder="Titre du Chapitre" class="p-2 border rounded font-bold">
+                    </div>
+                    <div id="dynamic-sections-container" class="space-y-4 mb-6"></div>
+                    <div class="flex gap-2">
+                        <button onclick="addSection()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm">+ Ajouter un bloc</button>
+                        <button onclick="publishContent()" class="bg-green-600 text-white px-6 py-2 rounded text-sm font-bold ml-auto">Enregistrer le cours</button>
+                    </div>
+                </div>
 
-                        <div class="mt-10 flex flex-wrap gap-4 p-6 bg-slate-50 rounded-2xl border-2 border-dashed">
-                            <button onclick="addSection()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-md transition">
-                                <i class="fas fa-layer-group mr-2"></i>Ajouter un bloc de contenu
-                            </button>
-                            <button onclick="publishContent()" id="btn-publish" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold shadow-md ml-auto transition">
-                                <i class="fas fa-cloud-upload-alt mr-2"></i>ENREGISTRER LE COURS
-                            </button>
-                            <button onclick="resetCourseForm()" id="btn-cancel-edit" class="hidden bg-gray-500 text-white px-6 py-3 rounded-xl transition">Annuler</button>
-                            <input type="hidden" id="edit-lesson-id">
+                <div id="tab-fiche" class="admin-tab hidden">
+                    <h3 class="font-bold mb-4 border-b pb-2">Créer une fiche de préparation</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded mb-4">
+                        <div>
+                            <label class="text-xs font-bold">Associer au chapitre :</label>
+                            <select id="fiche-lesson-id" class="w-full p-2 border rounded"></select>
                         </div>
+                        <div>
+                            <label class="text-xs font-bold">Code de téléchargement (pour l'enseignant) :</label>
+                            <input type="text" id="fiche-download-code" placeholder="Ex: PREP2024" class="w-full p-2 border rounded">
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4 bg-white border p-4 rounded shadow-inner">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="f-niveau" placeholder="Niveau (Clis...)" class="p-2 border">
+                            <input type="text" id="f-discipline" placeholder="Discipline" class="p-2 border">
+                        </div>
+                        <div class="grid grid-cols-1 gap-2">
+                            <input type="text" id="f-obj-disc" placeholder="Objectif disciplinaire" class="p-2 border">
+                            <input type="text" id="f-obj-lang" placeholder="Objectif langagier" class="p-2 border">
+                        </div>
+                        <textarea id="f-competences" placeholder="Compétences du socle commun..." class="w-full p-2 border h-20"></textarea>
+                        <textarea id="f-phases" placeholder="Détails des phases (Tableau HTML ou Texte)" class="w-full p-2 border h-32"></textarea>
+                        <button onclick="saveFiche()" class="w-full bg-blue-600 text-white py-3 rounded font-bold">Enregistrer la Fiche</button>
                     </div>
                 </div>
 
                 <div id="tab-users" class="admin-tab hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 h-fit">
-                            <h3 class="font-bold text-lg mb-4 text-blue-900"><i class="fas fa-user-plus mr-2"></i>Nouvel Accès</h3>
-                            <div class="space-y-4">
-                                <input type="text" id="new-user-name" placeholder="Nom et Prénom" class="w-full p-3 border rounded-xl bg-white">
-                                <select id="new-user-type" class="w-full p-3 border rounded-xl bg-white">
-                                    <option value="Eleve">Élève</option>
-                                    <option value="Enseignant">Enseignant</option>
-                                </select>
-                                <input type="text" id="new-user-resp" placeholder="Classe ou Matière" class="w-full p-3 border rounded-xl bg-white">
-                                <button onclick="addNewUser()" class="w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition">Créer le compte</button>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                            <h4 class="font-bold mb-3">Nouvel utilisateur</h4>
+                            <input type="text" id="u-name" placeholder="Nom complet" class="w-full p-2 border rounded mb-2">
+                            <select id="u-type" class="w-full p-2 border rounded mb-2">
+                                <option value="Eleve">Élève</option>
+                                <option value="Enseignant">Enseignant</option>
+                            </select>
+                            <input type="text" id="u-resp" placeholder="Classe affectée" class="w-full p-2 border rounded mb-3">
+                            <button onclick="addNewUser()" class="w-full bg-blue-900 text-white py-2 rounded">Créer</button>
                         </div>
-                        <div class="lg:col-span-2 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
-                            <table class="w-full text-left border-collapse bg-white">
-                                <thead class="bg-slate-800 text-white">
+                        <div class="md:col-span-2 overflow-x-auto">
+                            <table class="w-full text-left border">
+                                <thead class="bg-gray-100">
                                     <tr>
-                                        <th class="p-4 text-sm font-semibold">Identité</th>
-                                        <th class="p-4 text-sm font-semibold">Accès (ID/Pass)</th>
-                                        <th class="p-4 text-sm font-semibold">Rôle / Affectation</th>
-                                        <th class="p-4 text-sm font-semibold">Statut</th>
+                                        <th class="p-2 text-xs">Nom</th>
+                                        <th class="p-2 text-xs">ID/PASS</th>
+                                        <th class="p-2 text-xs">Rôle</th>
+                                        <th class="p-2 text-xs">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody id="students-table-body" class="divide-y"></tbody>
+                                <tbody id="user-table-body"></tbody>
                             </table>
                         </div>
-                    </div>
-                </div>
-
-                <div id="tab-library" class="admin-tab hidden">
-                    <div class="bg-gray-50 p-4 rounded-xl mb-6 flex gap-4">
-                        <input type="text" id="filter-cycle" placeholder="🔍 Cycle" oninput="filterLessons()" class="p-2 border rounded-lg flex-1">
-                        <input type="text" id="filter-classe" placeholder="🔍 Classe" oninput="filterLessons()" class="p-2 border rounded-lg flex-1">
-                        <input type="text" id="filter-matiere" placeholder="🔍 Matière" oninput="filterLessons()" class="p-2 border rounded-lg flex-1">
-                    </div>
-                    <div class="overflow-hidden rounded-xl border border-gray-200">
-                        <table class="w-full text-left bg-white">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="p-4 border-b font-bold">Détails du cours</th>
-                                    <th class="p-4 border-b font-bold text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lessons-table-body" class="divide-y"></tbody>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -223,21 +198,21 @@
             projectId: "edu-portal-3db68",
             storageBucket: "edu-portal-3db68.firebasestorage.app",
             messagingSenderId: "58173024956",
-            appId: "1:58173024956:web:17d27c8e7b495a48a7beb9",
-            measurementId: "G-E6XPJFT967"
+            appId: "1:58173024956:web:17d27c8e7b495a48a7beb9"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Variables Globales window pour accès depuis les attributs onclick HTML
         window.editors = {};
         window.sectionCount = 0;
         window.users = [];
-        window.publishedLessons = [];
+        window.lessons = [];
+        window.fiches = {};
         window.currentUser = null;
+        window.currentLessonKey = null;
 
-        // --- ECOUTE DES DONNEES ---
+        // Sync Data
         onValue(ref(db, 'users'), (snapshot) => {
             const data = snapshot.val();
             window.users = data ? Object.keys(data).map(key => ({...data[key], fbKey: key})) : [];
@@ -246,22 +221,26 @@
 
         onValue(ref(db, 'lessons'), (snapshot) => {
             const data = snapshot.val();
-            window.publishedLessons = data ? Object.keys(data).map(key => ({...data[key], fbKey: key})) : [];
-            renderLessonsTable();
+            window.lessons = data ? Object.keys(data).map(key => ({...data[key], fbKey: key})) : [];
+            updateFicheSelect();
             if(window.currentUser) updateStudentSidebar();
         });
 
-        // --- NAVIGATION ---
+        onValue(ref(db, 'fiches'), (snapshot) => {
+            window.fiches = snapshot.val() || {};
+        });
+
+        // Navigation Admin
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('[id^="btn-tab-"]').forEach(b => b.classList.remove('border-b-2', 'border-red-500', 'font-bold'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('border-b-2', 'border-red-500', 'font-bold');
+        };
+
         window.showSection = (id) => {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
-        };
-
-        window.switchTab = (tabId) => {
-            document.querySelectorAll('.admin-tab').forEach(t => t.classList.add('hidden'));
-            document.querySelectorAll('[id^="btn-tab-"]').forEach(b => b.classList.remove('tab-active'));
-            document.getElementById(tabId).classList.remove('hidden');
-            document.getElementById('btn-' + tabId).classList.add('tab-active');
         };
 
         window.checkAdminPass = () => {
@@ -271,100 +250,92 @@
             }
         };
 
-        // --- GESTION DES COURS ---
-        window.addSection = (title = "", content = "", level = "h1") => {
+        // Gestion Cours
+        window.addSection = (title = "", content = "") => {
             window.sectionCount++;
             const id = 'editor-' + window.sectionCount;
             const container = document.getElementById('dynamic-sections-container');
-            const html = `
-                <div id="block-${window.sectionCount}" class="p-6 bg-white border border-gray-200 rounded-2xl relative shadow-sm hover:shadow-md transition">
-                    <button onclick="this.parentElement.remove()" class="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full shadow-lg hover:scale-110 transition">×</button>
-                    <div class="flex flex-col md:flex-row gap-4 mb-4">
-                        <select class="p-2 border rounded-lg text-sm font-bold bg-blue-50 text-blue-900 outline-none w-full md:w-40">
-                            <option value="h1" ${level=='h1'?'selected':''}>Titre (Principal)</option>
-                            <option value="h2" ${level=='h2'?'selected':''}>Sous-titre (II)</option>
-                            <option value="h3" ${level=='h3'?'selected':''}>Petit Titre (A)</option>
-                        </select>
-                        <input type="text" value="${title}" placeholder="Entrez le titre du bloc..." class="flex-1 p-2 font-bold border-b-2 focus:border-blue-400 outline-none">
-                    </div>
-                    <textarea id="${id}">${content}</textarea>
-                    <div class="mt-4 flex gap-3">
-                        <button onclick="insertBlock(${window.sectionCount}, 'nb')" class="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-bold">📝 NB</button>
-                        <button onclick="insertBlock(${window.sectionCount}, 'exo')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold">✍️ EXERCICE</button>
-                    </div>
-                </div>`;
+            const html = `<div id="block-${window.sectionCount}" class="p-4 border rounded bg-white relative">
+                <button onclick="this.parentElement.remove()" class="absolute top-2 right-2 text-red-500 font-bold">X</button>
+                <input type="text" value="${title}" placeholder="Titre du bloc" class="w-full p-2 mb-2 border-b font-bold outline-none">
+                <textarea id="${id}">${content}</textarea>
+            </div>`;
             container.insertAdjacentHTML('beforeend', html);
             ClassicEditor.create(document.querySelector(`#${id}`)).then(ed => window.editors[id] = ed);
         };
 
-        window.insertBlock = (num, type) => {
-            const editor = window.editors['editor-' + num];
-            const html = type === 'nb' ? '<div class="nb-block"><strong>NB :</strong> Remarque...</div>' : '<div class="exercice-block"><strong>EXO :</strong> Énoncé...</div>';
-            const viewFragment = editor.data.processor.toView(html);
-            const modelFragment = editor.data.toModel(viewFragment);
-            editor.model.insertContent(modelFragment);
-        };
-
         window.publishContent = () => {
-            const fbKey = document.getElementById('edit-lesson-id').value;
             const lesson = {
-                cycle: document.getElementById('adm-cycle').value,
                 classe: document.getElementById('adm-classe').value,
                 matiere: document.getElementById('adm-matiere').value,
                 chapitre: document.getElementById('adm-chapitre').value,
                 sections: []
             };
-
             const blocks = document.querySelectorAll('#dynamic-sections-container > div');
-            if(!lesson.chapitre || blocks.length === 0) return alert("Veuillez remplir les champs obligatoires.");
-
             blocks.forEach(div => {
                 lesson.sections.push({
-                    level: div.querySelector('select').value,
                     title: div.querySelector('input').value,
                     body: window.editors[div.querySelector('textarea').id].getData()
                 });
             });
-
-            const lessonRef = fbKey ? ref(db, 'lessons/' + fbKey) : push(ref(db, 'lessons'));
-            set(lessonRef, lesson).then(() => {
-                alert("✅ Cours synchronisé avec succès !");
-                resetCourseForm();
-                switchTab('tab-library');
+            push(ref(db, 'lessons'), lesson).then(() => {
+                alert("Cours publié !");
+                location.reload();
             });
         };
 
-        window.resetCourseForm = () => {
-            document.getElementById('adm-classe').value = "";
-            document.getElementById('adm-chapitre').value = "";
-            document.getElementById('edit-lesson-id').value = "";
-            document.getElementById('dynamic-sections-container').innerHTML = "";
-            document.getElementById('btn-cancel-edit').classList.add('hidden');
-            window.sectionCount = 0; window.editors = {};
-            addSection();
+        // Gestion Fiches
+        window.updateFicheSelect = () => {
+            const select = document.getElementById('fiche-lesson-id');
+            select.innerHTML = window.lessons.map(l => `<option value="${l.fbKey}">${l.chapitre} (${l.classe})</option>`).join('');
         };
 
-        // --- GESTION UTILISATEURS ---
+        window.saveFiche = () => {
+            const id = document.getElementById('fiche-lesson-id').value;
+            const fiche = {
+                niveau: document.getElementById('f-niveau').value,
+                discipline: document.getElementById('f-discipline').value,
+                objDisc: document.getElementById('f-obj-disc').value,
+                objLang: document.getElementById('f-obj-lang').value,
+                competences: document.getElementById('f-competences').value,
+                phases: document.getElementById('f-phases').value,
+                code: document.getElementById('fiche-download-code').value,
+                date: new Date().toLocaleDateString('fr-FR')
+            };
+            set(ref(db, 'fiches/' + id), fiche).then(() => alert("Fiche enregistrée !"));
+        };
+
+        // Gestion Utilisateurs
         window.addNewUser = () => {
-            const name = document.getElementById('new-user-name').value;
-            const type = document.getElementById('new-user-type').value;
-            const resp = document.getElementById('new-user-resp').value;
-            if(!name || !resp) return alert("Champs vides.");
-            const id = name.toLowerCase().slice(0,5) + Math.floor(10+Math.random()*89);
+            const name = document.getElementById('u-name').value;
+            const type = document.getElementById('u-type').value;
+            const resp = document.getElementById('u-resp').value;
+            const id = name.toLowerCase().replace(/\s/g, '').slice(0,5) + Math.floor(100+Math.random()*899);
             const pass = Math.random().toString(36).slice(-5).toUpperCase();
-            push(ref(db, 'users'), { name, type, resp, id, pass, active: true });
-            document.getElementById('new-user-name').value = "";
+            push(ref(db, 'users'), { name, type, resp, id, pass });
         };
 
-        window.toggleUser = (fbKey, currentStatus) => {
-            set(ref(db, 'users/' + fbKey + '/active'), !currentStatus);
+        window.deleteUser = (key) => {
+            if(confirm("Supprimer cet utilisateur ?")) remove(ref(db, 'users/' + key));
         };
 
+        window.renderUserTable = () => {
+            const tbody = document.getElementById('user-table-body');
+            tbody.innerHTML = window.users.map(u => `
+                <tr class="text-xs border-b">
+                    <td class="p-2"><b>${u.name}</b></td>
+                    <td class="p-2">${u.id} / ${u.pass}</td>
+                    <td class="p-2">${u.type} (${u.resp})</td>
+                    <td class="p-2"><button onclick="deleteUser('${u.fbKey}')" class="text-red-500"><i class="fas fa-trash"></i></button></td>
+                </tr>`).join('');
+        };
+
+        // Student View Functions
         window.loginUser = () => {
             const id = document.getElementById('stu-id').value;
             const pass = document.getElementById('stu-pass').value;
             const user = window.users.find(u => u.id === id && u.pass === pass);
-            if(user && user.active) {
+            if(user) {
                 window.currentUser = user;
                 showSection('student-view');
                 updateStudentSidebar();
@@ -373,65 +344,127 @@
             }
         };
 
-        // --- AFFICHAGE ET TABLES ---
-        window.renderUserTable = () => {
-            const tbody = document.getElementById('students-table-body');
-            tbody.innerHTML = window.users.map(u => `
-                <tr class="hover:bg-gray-50">
-                    <td class="p-4"><div class="font-bold">${u.name}</div><div class="text-xs text-gray-400">${u.type}</div></td>
-                    <td class="p-4"><span class="bg-gray-100 p-1 font-mono text-xs">${u.id}</span> <span class="bg-blue-50 text-blue-700 p-1 font-mono text-xs">${u.pass}</span></td>
-                    <td class="p-4 text-sm">${u.resp}</td>
-                    <td class="p-4"><button onclick="toggleUser('${u.fbKey}', ${u.active})" class="${u.active?'text-green-600':'text-red-600'} text-xs font-bold">${u.active?'ACTIF':'BLOQUÉ'}</button></td>
-                </tr>`).join('');
-        };
-
-        window.renderLessonsTable = () => {
-            const tbody = document.getElementById('lessons-table-body');
-            tbody.innerHTML = window.publishedLessons.map(l => `
-                <tr class="hover:bg-gray-50">
-                    <td class="p-4"><div class="text-xs font-bold text-gray-400">${l.cycle} | ${l.classe}</div><div class="text-lg font-bold">${l.chapitre}</div></td>
-                    <td class="p-4 text-center">
-                        <button onclick="editLesson('${l.fbKey}')" class="p-2 text-blue-600"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteLesson('${l.fbKey}')" class="p-2 text-red-600"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`).join('');
-        };
-
         window.updateStudentSidebar = () => {
             const list = document.getElementById('course-list-sidebar');
-            const search = document.getElementById('user-course-search').value.toLowerCase();
-            list.innerHTML = window.publishedLessons
-                .filter(l => l.classe.toLowerCase() === window.currentUser.resp.toLowerCase() && l.chapitre.toLowerCase().includes(search))
-                .map(l => `<li onclick="viewLesson('${l.fbKey}')" class="p-3 sidebar-link bg-slate-50 border-l-4 border-blue-900 font-bold">${l.chapitre}</li>`).join('');
+            list.innerHTML = window.lessons
+                .filter(l => l.classe.toLowerCase() === window.currentUser.resp.toLowerCase())
+                .map(l => `<li onclick="viewLesson('${l.fbKey}')" class="p-3 sidebar-link bg-slate-50 border-l-4 border-blue-900 font-bold text-xs">${l.chapitre}</li>`).join('');
         };
 
         window.viewLesson = (key) => {
-            const l = window.publishedLessons.find(x => x.fbKey === key);
-            let h1=0, h2=0, h3=0;
-            let html = `<div class="mb-10"><h2 class="text-4xl font-extrabold text-slate-900">${l.chapitre}</h2></div>`;
+            window.currentLessonKey = key;
+            const l = window.lessons.find(x => x.fbKey === key);
+            let html = `<h2 class="text-3xl font-extrabold text-blue-900 mb-6">${l.chapitre}</h2>`;
             l.sections.forEach(s => {
-                let num = s.level === 'h1' ? ++h1 : (s.level === 'h2' ? h1 + '.' + ++h2 : h1 + '.' + h2 + '.' + ++h3);
-                html += `<div class="mb-8"><div class="${s.level}-style"><span class="mr-2">${num}</span>${s.title}</div><div class="mt-4 prose max-w-none">${s.body}</div></div>`;
+                html += `<div class="mb-8"><h3 class="text-xl font-bold border-b-2 border-blue-100 pb-2 mb-4">${s.title}</h3><div class="prose max-w-none">${s.body}</div></div>`;
             });
-            document.getElementById('course-display').innerHTML = html;
+            document.getElementById('user-content-area').innerHTML = html;
+            toggleUserSubTab('cours');
         };
 
-        window.editLesson = (key) => {
-            const l = window.publishedLessons.find(x => x.fbKey === key);
-            document.getElementById('edit-lesson-id').value = key;
-            document.getElementById('adm-cycle').value = l.cycle;
-            document.getElementById('adm-classe').value = l.classe;
-            document.getElementById('adm-chapitre').value = l.chapitre;
-            document.getElementById('dynamic-sections-container').innerHTML = "";
-            document.getElementById('btn-cancel-edit').classList.remove('hidden');
-            window.sectionCount = 0; window.editors = {};
-            l.sections.forEach(s => addSection(s.title, s.body, s.level));
-            switchTab('tab-create');
+        window.toggleUserSubTab = (mode) => {
+            const btnCours = document.getElementById('btn-view-cours');
+            const btnFiche = document.getElementById('btn-view-fiche');
+            
+            if(mode === 'cours') {
+                btnCours.className = "py-4 px-2 tab-nav-active";
+                btnFiche.className = "py-4 px-2 text-gray-400";
+                if(window.currentLessonKey) viewLesson(window.currentLessonKey);
+            } else {
+                if(window.currentUser.type !== 'Enseignant') {
+                    alert("Accès réservé aux enseignants.");
+                    return;
+                }
+                btnFiche.className = "py-4 px-2 tab-nav-active";
+                btnCours.className = "py-4 px-2 text-gray-400";
+                showFicheAuth();
+            }
         };
 
-        window.deleteLesson = (key) => { if(confirm("Supprimer ce cours ?")) remove(ref(db, 'lessons/' + key)); };
-        window.filterUserSidebar = () => updateStudentSidebar();
-        window.filterLessons = () => renderLessonsTable();
+        window.showFicheAuth = () => {
+            const area = document.getElementById('user-content-area');
+            area.innerHTML = `
+                <div class="max-w-md mx-auto text-center py-10">
+                    <i class="fas fa-lock text-4xl text-amber-500 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-4">Autorisation requise</h3>
+                    <input type="text" id="access-code" placeholder="Entrez le code administrateur" class="w-full p-3 border rounded mb-4 text-center">
+                    <button onclick="verifyFicheCode()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold w-full">Vérifier et afficher</button>
+                </div>`;
+        };
+
+        window.verifyFicheCode = () => {
+            const code = document.getElementById('access-code').value;
+            const fiche = window.fiches[window.currentLessonKey];
+            if(fiche && code === fiche.code) {
+                renderFicheTable(fiche);
+            } else {
+                alert("Code incorrect ou aucune fiche pour ce chapitre.");
+            }
+        };
+
+        window.renderFicheTable = (f) => {
+            const lesson = window.lessons.find(l => l.fbKey === window.currentLessonKey);
+            const html = `
+                <div class="flex justify-between items-center mb-6 no-print">
+                    <h2 class="font-bold text-xl">Fiche de préparation</h2>
+                    <button onclick="downloadPDF()" class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold">
+                        <i class="fas fa-file-pdf mr-2"></i>Télécharger PDF
+                    </button>
+                </div>
+                <div id="fiche-to-print" class="p-4 border bg-white">
+                    <table class="fiche-table">
+                        <tr>
+                            <td colspan="2"><b>Niveau :</b> ${f.niveau}</td>
+                            <td colspan="2" class="text-center"><b>Titre de la séance :</b><br>${lesson.chapitre}</td>
+                            <td colspan="2"><b>Date :</b> ${f.date}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">
+                                <b>Objectif disciplinaire :</b><br>${f.objDisc}<br><br>
+                                <b>Objectif langagier :</b><br>${f.objLang}
+                            </td>
+                            <td colspan="3">
+                                <b>Connaissances et capacités :</b><br>${f.competences}
+                            </td>
+                        </tr>
+                        <tr class="fiche-header">
+                            <td>Phase</td>
+                            <td>Organisation</td>
+                            <td>Rôle Enseignant</td>
+                            <td>Tâche Élève</td>
+                            <td colspan="2">Médiation</td>
+                        </tr>
+                        <tr>
+                            <td colspan="6" class="p-0">
+                                <div class="min-h-[400px] p-2">${f.phases}</div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div class="mt-4 text-[9px] text-gray-400 italic">Document généré par EDU-PORTAL - Christian Fanera</div>
+                </div>`;
+            document.getElementById('user-content-area').innerHTML = html;
+        };
+
+        window.downloadPDF = () => {
+            const element = document.getElementById('fiche-to-print');
+            html2pdf().from(element).set({
+                margin: 10,
+                filename: 'Fiche_Preparation.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            }).save();
+        };
+
     </script>
+
+    <footer class="mt-20 p-10 bg-slate-900 text-white text-center">
+        <div class="max-w-2xl mx-auto opacity-70">
+            <p class="font-bold">TSIMANIRIMANANA Fanera Christian</p>
+            <p class="text-sm">Créateur de contenu - Études en Sciences de l'éducation (Master II)</p>
+            <p class="text-xs mt-2">Contact : tsiryfanera@gmail.com | 0336485137</p>
+        </div>
+    </footer>
+
 </body>
 </html>
