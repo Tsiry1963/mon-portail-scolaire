@@ -4,8 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Système Scolaire Dynamique - Local Storage</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+  // Collez ici votre firebaseConfig récupéré à l'étape 2
+  const firebaseConfig = {
+    apiKey: "VOTRE_API_KEY",
+    authDomain: "VOTRE_PROJET.firebaseapp.com",
+    databaseURL: "https://VOTRE_PROJET.firebaseio.com",
+    projectId: "VOTRE_PROJET",
+    storageBucket: "VOTRE_PROJET.appspot.com",
+    messagingSenderId: "VOTRE_ID",
+    appId: "VOTRE_APP_ID"
+  };
+
+  // Initialisation
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Rendre les fonctions accessibles globalement pour vos boutons
+  window.publishContent = () => {
+      const lesson = {
+          cycle: document.getElementById('adm-cycle').value,
+          chapitre: document.getElementById('adm-chapitre').value,
+          // ... récupérez les autres champs comme avant
+      };
+      
+      // Envoi vers Firebase au lieu de localStorage
+      const lessonsRef = ref(db, 'lessons/');
+      const newLessonRef = push(lessonsRef);
+      set(newLessonRef, lesson).then(() => alert("Cours publié partout !"));
+  };
+
+  // Synchronisation en temps réel (pour les élèves)
+  onValue(ref(db, 'lessons/'), (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+          publishedLessons = Object.values(data);
+          updateStudentSidebar(); // Met à jour l'affichage automatiquement
+      }
+  });
+</script>
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
