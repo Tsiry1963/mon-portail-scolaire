@@ -199,7 +199,7 @@
                     <div class="bg-red-600 p-2 rounded-lg"><i class="fas fa-terminal"></i></div>
                     <h2 class="text-xl font-black poppins tracking-tight">CENTRAL MANAGEMENT SYSTEM</h2>
                 </div>
-                <button onclick="location.reload()" class="text-xs bg-white/10 hover:bg-white/20 px-6 py-2 rounded-full font-bold uppercase tracking-widest transition">Déconnexion</button>
+                <button onclick="logoutAdmin()" class="text-xs bg-white/10 hover:bg-white/20 px-6 py-2 rounded-full font-bold uppercase tracking-widest transition">Déconnexion</button>
             </div>
 
             <div class="flex border-b bg-slate-50 overflow-x-auto scrollbar-hide">
@@ -352,9 +352,10 @@
             </div>
         </div>
     </section>
-
     <script type="module">
+        // 1. IMPORT FIREBASE AVEC AUTH INTÉGRÉE
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
         import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
         const firebaseConfig = {
@@ -369,6 +370,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const auth = getAuth(app); // Initialisation de l'authentification
 
         // Variables Globales
         window.editors = {};
@@ -405,6 +407,17 @@
             renderNotifications();
         });
 
+        // 3. SURVEILLANCE DE L'ÉTAT DE CONNEXION ADMIN
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("Admin authentifié :", user.email);
+            } else {
+                if (!document.getElementById('admin-panel').classList.contains('hidden')) {
+                    location.reload(); 
+                }
+            }
+        });
+
         // --- NAVIGATION ---
         window.showSection = (id) => {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
@@ -418,12 +431,30 @@
             document.getElementById('btn-' + tabId).classList.add('tab-active');
         };
 
+        // 2. FONCTION CONNEXION ADMIN MISE À JOUR (EMAIL + AUTH)
         window.checkAdminPass = () => {
-            if(document.getElementById('admin-pass').value === 'Tsiry@1963!') {
-                showSection('admin-panel');
-                if(window.sectionCount === 0) addSection();
-                if(document.getElementById('prep-steps-container').children.length === 0) addPrepStep();
-            }
+            const email = prompt("Veuillez saisir l'Email Administrateur :");
+            const pass = document.getElementById('admin-pass').value;
+            
+            if(!email) return;
+
+            signInWithEmailAndPassword(auth, email, pass)
+                .then((userCredential) => {
+                    showSection('admin-panel');
+                    if(window.sectionCount === 0) addSection();
+                    if(document.getElementById('prep-steps-container').children.length === 0) addPrepStep();
+                })
+                .catch((error) => {
+                    alert("Accès refusé : Identifiants administrateur incorrects.");
+                    console.error(error.message);
+                });
+        };
+
+        // FONCTION DECONNEXION MISE À JOUR
+        window.logoutAdmin = () => {
+            signOut(auth).then(() => {
+                location.reload();
+            });
         };
 
         window.loginUser = () => {
