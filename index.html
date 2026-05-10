@@ -60,6 +60,11 @@
         .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
         .notification-badge { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Styles spécifique pour l'organisation de la sidebar */
+        .level-header { background: #1e293b; color: white; padding: 8px 12px; border-radius: 12px; font-size: 11px; font-weight: 900; letter-spacing: 1px; margin-top: 15px; }
+        .subject-header { color: #3b82f6; font-weight: 800; font-size: 10px; text-transform: uppercase; margin-left: 10px; margin-top: 8px; border-left: 2px solid #cbd5e1; padding-left: 8px; }
+        .soft-skills-section { border-top: 2px dashed #e2e8f0; margin-top: 20px; padding-top: 15px; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen" oncontextmenu="return false;">
@@ -143,14 +148,14 @@
     <section id="student-view" class="hidden container mx-auto mt-6 flex flex-col md:flex-row gap-6 px-4 pb-20">
         <aside class="md:w-1/4 bg-white p-6 rounded-3xl shadow-xl h-fit md:sticky md:top-24 border border-slate-100 max-h-[85vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="font-black text-blue-900 uppercase text-xs tracking-widest">Contenus Disponibles</h3>
-                <i class="fas fa-filter text-slate-300"></i>
+                <h3 class="font-black text-blue-900 uppercase text-xs tracking-widest">Navigation Modules</h3>
+                <i class="fas fa-sitemap text-slate-300"></i>
             </div>
             <div class="relative mb-6">
-                <input type="text" id="user-course-search" placeholder="Filtrer les cours..." oninput="filterUserSidebar()" class="w-full pl-10 pr-3 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-400">
+                <input type="text" id="user-course-search" placeholder="Rechercher..." oninput="filterUserSidebar()" class="w-full pl-10 pr-3 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-blue-400">
                 <i class="fas fa-search absolute left-3.5 top-3.5 text-slate-400"></i>
             </div>
-            <div id="course-list-sidebar" class="space-y-4"></div>
+            <div id="course-list-sidebar" class="space-y-2"></div>
         </aside>
         
         <main class="md:w-2/4 space-y-6">
@@ -186,6 +191,7 @@
                     <span class="px-3 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full">ACADÉMIQUE</span>
                     <span class="px-3 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">BIBLIQUE</span>
                     <span class="px-3 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full">LEADERSHIP</span>
+                    <span class="px-3 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-full">DÉVELOPPEMENT PERSO</span>
                     <span class="px-3 py-1 bg-red-100 text-red-700 text-[10px] font-bold rounded-full">VIDÉOS</span>
                 </div>
             </div>
@@ -217,11 +223,12 @@
                                 <option>Académique</option>
                                 <option>Biblique</option>
                                 <option>Leadership</option>
+                                <option>Développement Personnel</option>
                                 <option>Formations Pro</option>
                                 <option>Médias & Vidéos</option>
                             </select>
-                            <input type="text" id="adm-classe" placeholder="Niveau / Groupe" class="p-3 border rounded-xl bg-white">
-                            <input type="text" id="adm-matiere" placeholder="Thématique / Matière" class="p-3 border rounded-xl bg-white">
+                            <input type="text" id="adm-classe" placeholder="Niveau (ex: 2nde, Terminale)" class="p-3 border rounded-xl bg-white">
+                            <input type="text" id="adm-matiere" placeholder="Matière / Thématique" class="p-3 border rounded-xl bg-white">
                             <div class="flex flex-col justify-center">
                                 <label class="text-[10px] font-black text-slate-400 uppercase">Médias Locaux</label>
                                 <input type="file" id="local-media-input" accept="image/*,video/*" class="text-[10px]">
@@ -302,8 +309,8 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-black text-blue-400 uppercase mb-1 block">Accès Section (Filtre)</label>
-                                    <input type="text" id="new-user-resp" placeholder="Ex: Collège ou Leadership" class="w-full p-4 border-none rounded-2xl bg-white shadow-sm">
+                                    <label class="text-[10px] font-black text-blue-400 uppercase mb-1 block">Accès Section (Filtre Niveau)</label>
+                                    <input type="text" id="new-user-resp" placeholder="Ex: 2nde ou Groupe A" class="w-full p-4 border-none rounded-2xl bg-white shadow-sm">
                                 </div>
                                 <div class="bg-white p-4 rounded-2xl border-2 border-dashed border-blue-200">
                                     <label class="text-[10px] font-black text-blue-400 uppercase block mb-2">Code de téléchargement autorisé</label>
@@ -352,6 +359,7 @@
             </div>
         </div>
     </section>
+
     <script type="module">
         // 1. IMPORT FIREBASE AVEC AUTH INTÉGRÉE
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
@@ -370,7 +378,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const auth = getAuth(app); // Initialisation de l'authentification
+        const auth = getAuth(app); 
 
         // Variables Globales
         window.editors = {};
@@ -407,10 +415,9 @@
             renderNotifications();
         });
 
-        // 3. SURVEILLANCE DE L'ÉTAT DE CONNEXION ADMIN
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                console.log("Admin authentifié :", user.email);
+                console.log("Admin authentifié");
             } else {
                 if (!document.getElementById('admin-panel').classList.contains('hidden')) {
                     location.reload(); 
@@ -431,30 +438,21 @@
             document.getElementById('btn-' + tabId).classList.add('tab-active');
         };
 
-        // 2. FONCTION CONNEXION ADMIN MISE À JOUR (EMAIL + AUTH)
         window.checkAdminPass = () => {
             const email = prompt("Veuillez saisir l'Email Administrateur :");
             const pass = document.getElementById('admin-pass').value;
-            
             if(!email) return;
-
             signInWithEmailAndPassword(auth, email, pass)
-                .then((userCredential) => {
+                .then(() => {
                     showSection('admin-panel');
                     if(window.sectionCount === 0) addSection();
                     if(document.getElementById('prep-steps-container').children.length === 0) addPrepStep();
                 })
-                .catch((error) => {
-                    alert("Accès refusé : Identifiants administrateur incorrects.");
-                    console.error(error.message);
-                });
+                .catch(() => alert("Accès refusé."));
         };
 
-        // FONCTION DECONNEXION MISE À JOUR
         window.logoutAdmin = () => {
-            signOut(auth).then(() => {
-                location.reload();
-            });
+            signOut(auth).then(() => { location.reload(); });
         };
 
         window.loginUser = () => {
@@ -467,8 +465,8 @@
                 document.getElementById('user-tabs').classList.remove('hidden');
                 document.getElementById('user-info-box').innerHTML = `
                     <p class="font-bold border-b border-white/20 pb-2 mb-2">${user.name}</p>
-                    <p class="opacity-80">Rôle : ${user.type}</p>
-                    <p class="opacity-80">Section : ${user.resp}</p>
+                    <p class="opacity-80 text-[10px]">Rôle : ${user.type}</p>
+                    <p class="opacity-80 text-[10px]">Accès Section : ${user.resp}</p>
                 `;
                 if(user.type === 'Enseignant' || user.type === 'Leader') document.getElementById('btn-view-prep').classList.remove('hidden');
                 updateStudentSidebar();
@@ -486,19 +484,14 @@
             document.getElementById('btn-view-prep').classList.toggle('text-blue-900', view === 'prep');
         };
 
-        // --- GESTION NOTIFICATIONS & TÉLÉCHARGEMENT ---
+        // --- GESTION TÉLÉCHARGEMENT ---
         window.checkDownloadAuth = () => {
-            const code = prompt("Veuillez saisir votre CODE DE TÉLÉCHARGEMENT personnel :");
+            const code = prompt("Veuillez saisir votre CODE DE TÉLÉCHARGEMENT :");
             if(code === window.currentUser.dlCode) {
-                html2pdf().set({ margin: 10, filename: 'Document_EduPortal.pdf', jsPDF: { format: 'a4', orientation: 'landscape' } }).from(document.getElementById('pdf-content')).save();
+                html2pdf().set({ margin: 10, filename: 'EDU-PORTAL_PRO.pdf', jsPDF: { format: 'a4', orientation: 'landscape' } }).from(document.getElementById('pdf-content')).save();
             } else {
-                alert("Code incorrect. Une demande d'autorisation a été envoyée à l'administrateur.");
-                push(ref(db, 'dl_requests'), {
-                    userName: window.currentUser.name,
-                    userId: window.currentUser.id,
-                    time: new Date().toLocaleTimeString(),
-                    status: 'En attente'
-                });
+                alert("Code invalide. Demande envoyée à l'administrateur.");
+                push(ref(db, 'dl_requests'), { userName: window.currentUser.name, userId: window.currentUser.id, time: new Date().toLocaleTimeString(), status: 'En attente' });
             }
         };
 
@@ -508,19 +501,15 @@
             window.downloadRequests.filter(r => r.status === 'En attente').forEach(req => {
                 const div = document.createElement('div');
                 div.className = "bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-2 flex justify-between items-center shadow-sm notification-badge";
-                div.innerHTML = `
-                    <div class="text-xs">
-                        <span class="font-black text-yellow-800">ALERT TÉLÉCHARGEMENT :</span> <b>${req.userName}</b> tente de télécharger un PDF sans code valide (${req.time}).
-                    </div>
-                    <button onclick="dismissNotify('${req.fbKey}')" class="text-yellow-600 font-bold text-xs uppercase underline">Ignorer</button>
-                `;
+                div.innerHTML = `<div class="text-xs"><span class="font-black text-yellow-800 uppercase">Alert :</span> <b>${req.userName}</b> requiert un code de téléchargement.</div>
+                <button onclick="dismissNotify('${req.fbKey}')" class="text-yellow-600 font-bold text-xs underline">Ignorer</button>`;
                 container.appendChild(div);
             });
         };
 
         window.dismissNotify = (key) => update(ref(db, 'dl_requests/' + key), {status: 'Vu'});
 
-        // --- FICHE DE PREPARATION (Original Scrupuleux) ---
+        // --- FICHE DE PREPARATION ---
         window.addPrepStep = (phase = "", teacher = "", student = "", med = "") => {
             const container = document.getElementById('prep-steps-container');
             const html = `
@@ -544,9 +533,7 @@
                 document.getElementById('prep-competences').value = prep.competences || "";
                 if(prep.steps) prep.steps.forEach(s => addPrepStep(s.phase, s.teacher, s.student, s.med));
                 else addPrepStep();
-            } else {
-                resetPrepForm(false);
-            }
+            } else { resetPrepForm(false); }
         };
 
         function resetPrepForm(full = true) {
@@ -560,7 +547,7 @@
 
         window.savePrepSheet = () => {
             const lessonId = document.getElementById('prep-lesson-id').value;
-            if(!lessonId) { alert("Veuillez sélectionner un chapitre."); return; }
+            if(!lessonId) return alert("Sélectionnez un chapitre.");
             const steps = [];
             document.querySelectorAll('.prep-step-row').forEach(row => {
                 steps.push({
@@ -571,7 +558,7 @@
                 });
             });
             const data = { date: document.getElementById('prep-date').value, objDisc: document.getElementById('prep-obj-disc').value, competences: document.getElementById('prep-competences').value, steps: steps };
-            set(ref(db, 'prepSheets/' + lessonId), data).then(() => { alert("Sauvegardée !"); resetPrepForm(true); });
+            set(ref(db, 'prepSheets/' + lessonId), data).then(() => { alert("Enregistré !"); resetPrepForm(true); });
         };
 
         window.populatePrepSelect = () => {
@@ -581,31 +568,52 @@
             if(cur) s.value = cur;
         };
 
-        // --- GESTION SIDEBAR FILTRÉE ---
-       window.updateStudentSidebar = () => {
+        // --- MISE À JOUR : GESTION SIDEBAR HIÉRARCHIQUE & FILTRE RESP ---
+        window.updateStudentSidebar = () => {
             const search = document.getElementById('user-course-search').value.toLowerCase();
             const sidebar = document.getElementById('course-list-sidebar');
             sidebar.innerHTML = "";
             
-            const myLessons = window.publishedLessons.filter(l => 
-                l.classe.toLowerCase().includes(window.currentUser.resp.toLowerCase()) && 
-                (l.chapitre.toLowerCase().includes(search) || l.matiere.toLowerCase().includes(search))
-            );
+            // 1. Filtrage Strict par section d'accès (resp)
+            const filtered = window.publishedLessons.filter(l => {
+                const matchResp = l.classe.toLowerCase().includes(window.currentUser.resp.toLowerCase());
+                const matchSearch = l.chapitre.toLowerCase().includes(search) || l.matiere.toLowerCase().includes(search);
+                return matchResp && matchSearch;
+            });
 
-            const grouped = myLessons.reduce((acc, curr) => { if(!acc[curr.matiere]) acc[curr.matiere] = []; acc[curr.matiere].push(curr); return acc; }, {});
-            
-            for (const matiere in grouped) {
-                let matiereHtml = `<div class="mb-4">
-                    <h4 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 border-b-2 border-slate-50 pb-1">${matiere}</h4>
-                    <div class="space-y-2">`;
-                grouped[matiere].forEach(lesson => {
-                    matiereHtml += `
-                        <button onclick="viewLesson('${lesson.fbKey}')" class="w-full text-left p-3 rounded-2xl bg-white border border-slate-100 hover:border-blue-300 hover:shadow-md transition group">
-                            <span class="text-xs font-bold text-slate-700 leading-tight group-hover:text-blue-700">${lesson.chapitre}</span>
-                        </button>`;
-                });
-                matiereHtml += `</div></div>`;
-                sidebar.insertAdjacentHTML('beforeend', matiereHtml);
+            // 2. Séparation : Académique vs Soft Skills (Leadership/Dev Perso)
+            const academic = filtered.filter(l => l.cycle === "Académique");
+            const softSkills = filtered.filter(l => l.cycle === "Leadership" || l.cycle === "Développement Personnel");
+
+            const renderHierarchy = (list, container) => {
+                // Groupement par Classe (Niveau) puis par Matière
+                const hierarchy = list.reduce((acc, curr) => {
+                    if(!acc[curr.classe]) acc[curr.classe] = {};
+                    if(!acc[curr.classe][curr.matiere]) acc[curr.classe][curr.matiere] = [];
+                    acc[curr.classe][curr.matiere].push(curr);
+                    return acc;
+                }, {});
+
+                for(const level in hierarchy) {
+                    let levelHtml = `<div class="level-header">${level.toUpperCase()}</div>`;
+                    for(const subject in hierarchy[level]) {
+                        levelHtml += `<div class="subject-header">${subject}</div><div class="ml-4 space-y-1">`;
+                        hierarchy[level][subject].forEach(lesson => {
+                            levelHtml += `<button onclick="viewLesson('${lesson.fbKey}')" class="w-full text-left p-2.5 rounded-xl bg-white border border-slate-100 hover:border-blue-400 hover:shadow-sm transition text-xs font-medium text-slate-600">${lesson.chapitre}</button>`;
+                        });
+                        levelHtml += `</div>`;
+                    }
+                    container.insertAdjacentHTML('beforeend', levelHtml);
+                }
+            };
+
+            // Rendu de la section académique
+            renderHierarchy(academic, sidebar);
+
+            // Rendu de la section Leadership/Dev Perso avec séparation visuelle
+            if(softSkills.length > 0) {
+                sidebar.insertAdjacentHTML('beforeend', `<div class="soft-skills-section"><h4 class="text-[10px] font-black text-purple-600 uppercase tracking-tighter mb-4"><i class="fas fa-star mr-2"></i>Leadership & Développement</h4></div>`);
+                renderHierarchy(softSkills, sidebar);
             }
         };
 
@@ -622,9 +630,7 @@
                     <textarea id="${id}">${content}</textarea>
                 </div>`;
             document.getElementById('dynamic-sections-container').insertAdjacentHTML('beforeend', html);
-            ClassicEditor.create(document.querySelector(`#${id}`), {
-                mediaEmbed: { previewsInData: true }
-            }).then(ed => window.editors[id] = ed);
+            ClassicEditor.create(document.querySelector(`#${id}`), { mediaEmbed: { previewsInData: true } }).then(ed => window.editors[id] = ed);
         };
 
         window.publishContent = () => {
@@ -635,7 +641,7 @@
                 lesson.sections.push({ level: div.querySelector('select').value, title: div.querySelector('input').value, body: window.editors[edId].getData() });
             });
             const refL = key ? ref(db, 'lessons/' + key) : push(ref(db, 'lessons'));
-            set(refL, lesson).then(() => { alert("Contenu synchronisé avec succès !"); resetCourseForm(); switchTab('tab-library'); });
+            set(refL, lesson).then(() => { alert("Publié !"); resetCourseForm(); switchTab('tab-library'); });
         };
 
         window.resetCourseForm = () => {
@@ -648,12 +654,8 @@
 
         window.viewLesson = (key) => {
             const l = window.publishedLessons.find(x => x.fbKey === key);
-            let html = `
-                <div class="mb-10">
-                    <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">${l.matiere}</span>
-                    <h2 class="text-4xl font-black text-slate-900 mt-2 poppins">${l.chapitre}</h2>
-                    <div class="h-1.5 w-20 bg-blue-600 mt-4 rounded-full"></div>
-                </div>`;
+            let html = `<div class="mb-10"><span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">${l.cycle}</span>
+            <h2 class="text-4xl font-black text-slate-900 mt-2 poppins">${l.chapitre}</h2><div class="h-1.5 w-20 bg-blue-600 mt-4 rounded-full"></div></div>`;
             l.sections.forEach(s => { html += `<div class="mb-10"><div class="${s.level}-style poppins">${s.title}</div><div class="mt-4 leading-relaxed text-slate-700 text-lg">${s.body}</div></div>`; });
             document.getElementById('user-content-area').innerHTML = html;
             renderPrepSheetForUser(key);
@@ -664,20 +666,12 @@
             const prep = window.prepSheets[lessonKey];
             const div = document.getElementById('prep-sheet-render');
             const lesson = window.publishedLessons.find(x => x.fbKey === lessonKey);
-            if(!prep) { div.innerHTML = "<p class='text-gray-400 italic py-10 text-center'>Aucune fiche technique associée à ce module.</p>"; return; }
+            if(!prep) { div.innerHTML = "<p class='text-gray-400 italic py-10 text-center'>Aucune fiche technique associée.</p>"; return; }
             let st = prep.steps.map(s => `<tr><td class="font-bold">${s.phase}</td><td>${s.teacher}</td><td>${s.student}</td><td>${s.med}</td></tr>`).join('');
-            div.innerHTML = `
-                <div id="pdf-content" class="bg-white p-6 border border-black shadow-inner">
-                    <div class="text-center border-b-2 border-black pb-4 mb-4">
-                        <h1 class="text-xl font-black">FICHE TECHNIQUE - ${lesson.matiere.toUpperCase()}</h1>
-                        <p class="text-xs">Identifiant Module : ${lessonKey}</p>
-                    </div>
-                    <table class="prep-table">
-                        <tr><td colspan="2"><b>Groupe/Niveau :</b> ${lesson.classe}</td><td colspan="2" class="text-center font-bold">TITRE : ${lesson.chapitre}</td><td><b>Date :</b> ${prep.date}</td></tr>
-                        <tr><td colspan="5"><b>Objectifs & Compétences :</b><br>${prep.objDisc}</td></tr>
-                    </table>
-                    <table class="prep-table mt-4"><tr class="prep-header"><td>Phase</td><td>Rôle Enseignant</td><td>Tâche Apprenant</td><td>Médiation / Support</td></tr>${st}</table>
-                </div>`;
+            div.innerHTML = `<div id="pdf-content" class="bg-white p-6 border border-black"><div class="text-center border-b-2 border-black pb-4 mb-4"><h1 class="text-xl font-black">FICHE TECHNIQUE - ${lesson.matiere.toUpperCase()}</h1></div>
+            <table class="prep-table"><tr><td colspan="2"><b>Niveau :</b> ${lesson.classe}</td><td colspan="2" class="text-center font-bold">TITRE : ${lesson.chapitre}</td><td><b>Date :</b> ${prep.date}</td></tr>
+            <tr><td colspan="5"><b>Objectifs & Compétences :</b><br>${prep.objDisc}</td></tr></table>
+            <table class="prep-table mt-4"><tr class="prep-header"><td>Phase</td><td>Enseignant</td><td>Élève</td><td>Supports</td></tr>${st}</table></div>`;
         }
 
         window.addNewUser = () => {
@@ -687,17 +681,12 @@
             const dc = document.getElementById('new-user-dl-code').value;
             if(!n) return;
             const id = n.toLowerCase().slice(0,4).replace(/\s/g,'') + Math.floor(100+Math.random()*899);
-            push(ref(db, 'users'), { 
-                name: n, type: t, resp: r, id: id, 
-                pass: Math.random().toString(36).slice(-5).toUpperCase(), 
-                active: true, dlCode: dc || 'NONE'
-            });
+            push(ref(db, 'users'), { name: n, type: t, resp: r, id: id, pass: Math.random().toString(36).slice(-5).toUpperCase(), active: true, dlCode: dc || 'NONE' });
             document.getElementById('new-user-name').value = "";
             document.getElementById('new-user-resp').value = "";
-            document.getElementById('new-user-dl-code').value = "";
         };
 
-        window.deleteUser = (k) => { if(confirm("Supprimer définitivement cet utilisateur ?")) remove(ref(db, 'users/' + k)); };
+        window.deleteUser = (k) => { if(confirm("Supprimer ?")) remove(ref(db, 'users/' + k)); };
         window.toggleUser = (k, s) => set(ref(db, 'users/' + k + '/active'), !s);
         
         window.editLesson = (k) => {
@@ -712,42 +701,31 @@
             switchTab('tab-create');
         };
 
-        window.deleteLesson = (k) => { if(confirm("Supprimer ce module et sa fiche de prep ?")) { remove(ref(db, 'lessons/' + k)); remove(ref(db, 'prepSheets/' + k)); } };
+        window.deleteLesson = (k) => { if(confirm("Supprimer ?")) { remove(ref(db, 'lessons/' + k)); remove(ref(db, 'prepSheets/' + k)); } };
 
         window.renderUserTable = () => {
             const tbody = document.getElementById('students-table-body');
             document.getElementById('user-count').innerText = `${window.users.length} Utilisateurs`;
             tbody.innerHTML = window.users.map(u => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-5">
-                        <div class="font-bold text-slate-800">${u.name}</div>
-                        <div class="text-[10px] text-slate-400 font-bold uppercase">${u.type}</div>
-                    </td>
-                    <td class="p-5">
-                        <div class="text-xs bg-slate-100 p-2 rounded-lg font-mono">ID: ${u.id} | PASS: ${u.pass}</div>
-                        <div class="text-[10px] mt-1 text-blue-600 font-bold">Code DL : ${u.dlCode}</div>
-                    </td>
+                <tr class="hover:bg-slate-50">
+                    <td class="p-5"><b>${u.name}</b><br><span class="text-[10px] uppercase text-slate-400 font-bold">${u.type}</span></td>
+                    <td class="p-5 text-xs">ID: ${u.id} | PW: ${u.pass}<br>DL: ${u.dlCode}</td>
                     <td class="p-5"><span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-bold">${u.resp}</span></td>
-                    <td class="p-5 text-center flex items-center justify-center gap-2">
+                    <td class="p-5 text-center flex gap-2 justify-center">
                         <button onclick="toggleUser('${u.fbKey}',${u.active})" class="p-2 rounded-lg ${u.active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}"><i class="fas ${u.active ? 'fa-check' : 'fa-ban'}"></i></button>
-                        <button onclick="deleteUser('${u.fbKey}')" class="p-2 bg-slate-100 text-slate-400 hover:text-red-600 rounded-lg"><i class="fas fa-trash-alt"></i></button>
+                        <button onclick="deleteUser('${u.fbKey}')" class="p-2 bg-slate-100 text-slate-400 rounded-lg"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 </tr>`).join('');
         };
 
         window.renderLessonsTable = () => {
             document.getElementById('lessons-table-body').innerHTML = window.publishedLessons.map(l => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-6">
-                        <div class="text-[10px] font-black text-blue-500 uppercase">${l.matiere}</div>
-                        <div class="font-black text-slate-800 poppins">${l.chapitre}</div>
-                    </td>
-                    <td class="p-6">
-                        <span class="text-xs font-bold bg-slate-100 px-3 py-1 rounded-full text-slate-500">${l.classe} / ${l.cycle}</span>
-                    </td>
+                <tr class="hover:bg-slate-50">
+                    <td class="p-6"><b>${l.chapitre}</b><br><span class="text-[10px] text-blue-500 uppercase font-black">${l.matiere}</span></td>
+                    <td class="p-6 text-xs font-bold text-slate-500">${l.classe} / ${l.cycle}</td>
                     <td class="p-6 text-center">
-                        <button onclick="editLesson('${l.fbKey}')" class="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteLesson('${l.fbKey}')" class="p-3 text-red-600 hover:bg-red-50 rounded-xl transition"><i class="fas fa-trash-alt"></i></button>
+                        <button onclick="editLesson('${l.fbKey}')" class="p-3 text-blue-600 hover:bg-blue-50 rounded-xl"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteLesson('${l.fbKey}')" class="p-3 text-red-600 hover:bg-red-50 rounded-xl"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 </tr>`).join('');
         };
